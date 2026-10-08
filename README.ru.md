@@ -9,6 +9,10 @@
   <em>Нулевые накладные расходы • Без Docker • Генерация QR-кодов и .conf в 1 клик • Тёмная тема в стиле wg-easy</em>
 </p>
 
+<p align="center">
+  <img src="src/assets/screenshot.jpg" alt="Скриншот интерфейса AwgIt" width="850">
+</p>
+
 ---
 
 ## ⚡ Особенности и Преимущества

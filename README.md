@@ -9,6 +9,10 @@
   <em>Zero overhead • No Docker required • 1-Click QR codes & .conf generation • Sleek dark UI inspired by wg-easy</em>
 </p>
 
+<p align="center">
+  <img src="src/assets/screenshot.jpg" alt="AwgIt Web Interface Screenshot" width="850">
+</p>
+
 ---
 
 ## ⚡ Features & Highlights

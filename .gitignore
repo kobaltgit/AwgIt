@@ -9,6 +9,7 @@ awgit-backup-*.json
 
 # Screenshots & sensitive media
 *.png
+!src/assets/banner.png
 ui_screenshot.png
 
 # OS generated files

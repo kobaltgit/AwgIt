@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AwgIt • AmneziaWG Manager</title>
+  <link rel="icon" type="image/x-icon" href="/awg/assets/favicon.ico">
+  <link rel="shortcut icon" href="/awg/favicon.ico">
+  <style>
+    :root {
+      --bg-body: #161618;
+      --bg-card: #202024;
+      --bg-card-hover: #26262b;
+      --border: rgba(255,255,255,0.07);
+      --text: #f4f4f5;
+      --muted: #9ba1a6;
+      --green: #10b981;
+      --red: #e03131;
+      --blue: #3b82f6;
+      --btn: #2d2d33;
+      --btn-h: #3a3a42;
+    }
+    [data-theme="light"] {
+      --bg-body: #f4f4f5;
+      --bg-card: #ffffff;
+      --bg-card-hover: #f0f0f2;
+      --border: rgba(0,0,0,0.08);
+      --text: #18181b;
+      --muted: #71717a;
+      --btn: #e4e4e7;
+      --btn-h: #d4d4d8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg-body); color: var(--text); min-height: 100vh; padding: 24px 16px; display: flex; justify-content: center; transition: background 0.2s, color 0.2s; }
+    .container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 20px; }
+
+    /* Brand */
+    .brand-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 700; flex-shrink: 0; }
+    .brand svg { fill: var(--red); width: 28px; height: 28px; flex-shrink: 0; }
+    .brand-right { display: flex; align-items: center; gap: 10px; }
+    .server-badge { background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 4px 12px; border-radius: 20px; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+    [data-theme="light"] .server-badge { background: rgba(0,0,0,0.04); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+    .theme-btn { background: none; border: 1px solid var(--border); border-radius: 50%; width: 34px; height: 34px; cursor: pointer; color: var(--muted); display: flex; align-items: center; justify-content: center; transition: all 0.2s; flex-shrink: 0; }
+    .theme-btn:hover { color: var(--text); border-color: var(--muted); }
+    .lang-switch { display: inline-flex; background: rgba(128,128,128,0.12); border: 1px solid var(--border); border-radius: 20px; padding: 2px; gap: 2px; flex-shrink: 0; }
+    .lang-btn { background: transparent; border: none; border-radius: 14px; padding: 4px 9px; font-size: 11px; font-weight: 600; color: var(--muted); cursor: pointer; transition: all 0.15s; }
+    .lang-btn:hover { color: var(--text); }
+    .lang-btn.active { background: var(--btn); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    [data-theme="light"] .lang-btn.active { background: #ffffff; color: #18181b; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+    /* Panel */
+    .panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+    .panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; flex-wrap: wrap; gap: 10px; }
+    .panel-title { font-size: 18px; font-weight: 600; }
+    .panel-actions { display: flex; gap: 8px; align-items: center; }
+
+    /* Buttons */
+    .btn { background: var(--btn); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.15s; white-space: nowrap; }
+    .btn:hover { background: var(--btn-h); }
+    .btn-primary { background: #333339; border-color: rgba(255,255,255,0.15); }
+    [data-theme="light"] .btn-primary { background: #e4e4e7; }
+    .btn-primary:hover { background: #42424b; }
+    [data-theme="light"] .btn-primary:hover { background: #d4d4d8; }
+    .btn-add { background: var(--green); color: #ffffff; border-color: rgba(255,255,255,0.15); padding: 8px 12px; }
+    .btn-add:hover { background: #059669; border-color: rgba(255,255,255,0.25); color: #ffffff; }
+    [data-theme="light"] .btn-add { background: var(--green); color: #ffffff; border-color: transparent; }
+    [data-theme="light"] .btn-add:hover { background: #059669; }
+    .btn-icon { padding: 6px 8px; background: transparent; border: none; color: var(--muted); cursor: pointer; border-radius: 6px; transition: all 0.15s; display: inline-flex; align-items: center; justify-content: center; }
+    .btn-icon:hover { color: var(--text); background: rgba(128,128,128,0.12); }
+    .btn-icon.danger:hover { color: #ff6b6b; background: rgba(224,49,49,0.12); }
+    .btn-icon.success:hover { color: var(--green); background: rgba(16,185,129,0.12); }
+    .btn-icon.download:hover { color: var(--text); background: rgba(128,128,128,0.16); }
+    .btn-icon.edit:hover { color: var(--blue); background: rgba(59,130,246,0.12); }
+
+    /* Clients */
+    .clients-list { display: flex; flex-direction: column; gap: 8px; }
+    .client-card { display: flex; align-items: center; gap: 12px; background: rgba(128,128,128,0.04); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px; transition: background 0.15s; }
+    .client-card:hover { background: var(--bg-card-hover); }
+    .avatar { width: 36px; height: 36px; border-radius: 50%; background: rgba(128,128,128,0.12); display: flex; align-items: center; justify-content: center; color: var(--muted); flex-shrink: 0; }
+    .client-meta { flex: 1; min-width: 130px; }
+    .client-name { font-size: 14px; font-weight: 600; }
+    .client-sub { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 6px; margin-top: 2px; flex-wrap: wrap; }
+    
+    /* Breathing glowing status dot */
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); display: inline-block; flex-shrink: 0; transition: all 0.3s; }
+    .dot, .status-dot.online {
+      background: var(--green);
+      box-shadow: 0 0 6px rgba(16, 185, 129, 0.7);
+      animation: status-breathe 2.4s ease-in-out infinite;
+    }
+    @keyframes status-breathe {
+      0%, 100% {
+        opacity: 1;
+        box-shadow: 0 0 3px rgba(16, 185, 129, 0.4);
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.65;
+        box-shadow: 0 0 10px 2px rgba(16, 185, 129, 0.85);
+        transform: scale(1.2);
+      }
+    }
+
+    /* Live Mini Activity Chart (Sparkline) */
+    .client-chart {
+      flex: 1.2;
+      max-width: 170px;
+      min-width: 90px;
+      height: 28px;
+      background: rgba(128,128,128,0.05);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: 6px;
+      padding: 2px 4px;
+      display: flex;
+      align-items: center;
+      box-sizing: border-box;
+    }
+    [data-theme="light"] .client-chart {
+      background: rgba(0,0,0,0.03);
+      border-color: rgba(0,0,0,0.06);
+    }
+    .sparkline { width: 100%; height: 100%; display: block; overflow: visible; }
+
+    /* Speed */
+    .client-speed { display: flex; gap: 14px; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+    .speed-item { display: flex; flex-direction: column; align-items: center; gap: 1px; min-width: 60px; }
+    .speed-val { font-size: 13px; font-weight: 500; color: var(--text); display: flex; align-items: center; gap: 3px; }
+    .speed-val svg { flex-shrink: 0; }
+    .speed-bps { font-size: 10px; color: var(--muted); }
+
+    /* Controls */
+    .client-toggle { display: flex; align-items: center; flex-shrink: 0; margin-left: auto; }
+    .action-btns { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+    .switch { position: relative; display: inline-block; width: 42px; height: 22px; flex-shrink: 0; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; inset: 0; background: #38383e; transition: .25s; border-radius: 22px; }
+    .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background: white; transition: .25s; border-radius: 50%; }
+    input:checked + .slider { background: var(--red); }
+    input:checked + .slider:before { transform: translateX(20px); }
+
+    /* Modals */
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); display: none; align-items: center; justify-content: center; z-index: 100; padding: 16px; }
+    .modal-backdrop.show { display: flex; }
+    .modal { background: var(--bg-card); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; max-width: 440px; width: 100%; padding: 24px; box-shadow: 0 16px 48px rgba(0,0,0,0.5); }
+    [data-theme="light"] .modal { border-color: rgba(0,0,0,0.1); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+    .modal-title { font-size: 17px; font-weight: 600; }
+    .input-group { margin-bottom: 16px; }
+    .input-label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+    .input-text { width: 100%; background: var(--bg-body); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-size: 14px; outline: none; transition: border-color 0.2s; }
+    .input-text:focus { border-color: var(--red); }
+    .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+    /* QR */
+    .qr-box { background: #fff; padding: 16px; border-radius: 12px; display: flex; justify-content: center; margin: 16px 0; }
+    .conf-preview { background: var(--bg-body); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-family: monospace; font-size: 11px; color: #d4d4d8; max-height: 130px; overflow-y: auto; white-space: pre; margin-top: 8px; }
+    [data-theme="light"] .conf-preview { color: #3f3f46; }
+
+    /* Delete confirm */
+    .delete-warning { font-size: 14px; color: var(--muted); margin-bottom: 4px; }
+    .delete-name { font-weight: 600; color: var(--text); }
+
+    /* Empty */
+    .empty { text-align: center; padding: 40px 16px; color: var(--muted); font-size: 14px; }
+
+    /* Responsive Adaptation */
+    @media (max-width: 720px) {
+      body { padding: 14px 10px; }
+      .container { gap: 14px; }
+      .panel { padding: 14px 12px; }
+      .panel-header { gap: 8px; margin-bottom: 12px; }
+      .btn-text { display: none; }
+      .panel-actions .btn { padding: 8px 10px; }
+
+      .brand-bar { flex-wrap: wrap; gap: 10px; }
+      .server-badge .server-ep { display: none; }
+      .server-badge .server-sep-ep { display: none; }
+
+      .client-card {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        grid-template-areas:
+          "avatar meta toggle"
+          "chart  chart chart"
+          "speed  speed actions";
+        gap: 8px 10px;
+        padding: 12px 14px;
+      }
+      .avatar { grid-area: avatar; align-self: center; }
+      .client-meta { grid-area: meta; align-self: center; min-width: 0; }
+      .client-toggle { grid-area: toggle; align-self: center; justify-self: end; margin-left: 0; }
+      .client-chart {
+        grid-area: chart;
+        width: 100%;
+        max-width: 100%;
+        height: 32px;
+        margin: 2px 0;
+      }
+      .client-speed {
+        grid-area: speed;
+        justify-content: flex-start;
+        align-self: center;
+        gap: 14px;
+      }
+      .action-btns {
+        grid-area: actions;
+        justify-self: end;
+        align-self: center;
+      }
+    }
+
+    @media (max-width: 440px) {
+      .client-card { padding: 10px 12px; gap: 6px 8px; }
+      .client-speed { gap: 8px; }
+      .speed-item { min-width: 50px; }
+      .speed-val { font-size: 11px; }
+      .speed-bps { font-size: 9px; }
+      .btn-icon { padding: 4px 5px; }
+      .brand { font-size: 18px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Brand Bar -->
+  <div class="brand-bar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 2.18l7 3.12v4.7c0 4.54-3.14 8.78-7 9.88-3.86-1.1-7-5.34-7-9.88V6.3l7-3.12z"/></svg>
+      <span>AmneziaWG</span>
+    </div>
+    <div class="brand-right">
+      <div class="server-badge">
+        <span class="dot"></span>
+        <span id="serverInfo">...</span>
+      </div>
+      <div class="lang-switch" role="group" aria-label="Language">
+        <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+        <button class="lang-btn" data-lang="ru" onclick="setLang('ru')">RU</button>
+      </div>
+      <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+        <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Panel -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title" id="panelTitle">Clients</span>
+      <div class="panel-actions">
+        <button class="btn" id="btnRestore" onclick="doRestore()" title="Restore">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          <span class="btn-text" id="btnRestoreLabel">Restore</span>
+        </button>
+        <button class="btn" id="btnBackup" onclick="doBackup()" title="Backup">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span class="btn-text" id="btnBackupLabel">Backup</span>
+        </button>
+        <button class="btn" id="btnRefresh" onclick="fetchClients()" title="Refresh">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+          <span class="btn-text" id="btnRefreshLabel">Refresh</span>
+        </button>
+        <button class="btn btn-add" id="btnAddClient" onclick="openCreateModal()" title="New">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="clients-list" id="clientsList">
+      <div class="empty">...</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Create Modal -->
+<div class="modal-backdrop" id="createModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalCreateTitle">New AmneziaWG Client</span>
+      <button class="btn-icon" onclick="closeModal('createModal')">✕</button>
+    </div>
+    <div class="input-group">
+      <label class="input-label" id="modalCreateNameLabel">Client Name</label>
+      <input type="text" id="createName" class="input-text" placeholder="e.g. Phone, Laptop">
+    </div>
+    <div class="modal-footer">
+      <button class="btn" id="modalCreateCancel" onclick="closeModal('createModal')">Cancel</button>
+      <button class="btn btn-primary" id="btnCreate" onclick="submitCreate()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-backdrop" id="editModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalEditTitle">Edit Client</span>
+      <button class="btn-icon" onclick="closeModal('editModal')">✕</button>
+    </div>
+    <div class="input-group">
+      <label class="input-label" id="modalEditNameLabel">Client Name</label>
+      <input type="text" id="editName" class="input-text" placeholder="Name">
+    </div>
+    <div class="input-group">
+      <label class="input-label" id="modalEditIpLabel">IP Address (allowed_ips)</label>
+      <input type="text" id="editIp" class="input-text" placeholder="10.9.0.2/32">
+    </div>
+    <input type="hidden" id="editPubKey">
+    <div class="modal-footer">
+      <button class="btn" id="modalEditCancel" onclick="closeModal('editModal')">Cancel</button>
+      <button class="btn btn-primary" id="btnEdit" onclick="submitEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- QR / Config Modal -->
+<div class="modal-backdrop" id="qrModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="qrTitle">Configuration</span>
+      <button class="btn-icon" onclick="closeModal('qrModal')">✕</button>
+    </div>
+    <div class="qr-box" id="qrBox"></div>
+    <div class="conf-preview" id="confPreview"></div>
+    <div class="modal-footer">
+      <button class="btn" id="btnCopyConf" onclick="copyConf()">Copy</button>
+      <button class="btn btn-primary" id="btnDownload">Download .conf</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirm Modal -->
+<div class="modal-backdrop" id="deleteModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalDeleteTitle">Delete Client?</span>
+      <button class="btn-icon" onclick="closeModal('deleteModal')">✕</button>
+    </div>
+    <p class="delete-warning" id="deleteWarningText"><span id="deleteWarningMsg">Are you sure you want to delete client</span> <span class="delete-name" id="deleteClientName"></span>?</p>
+    <input type="hidden" id="deletePubKey">
+    <div class="modal-footer">
+      <button class="btn" id="modalDeleteCancel" onclick="closeModal('deleteModal')">Cancel</button>
+      <button class="btn" id="btnDeleteSubmit" style="background:#7f1d1d;border-color:#991b1b;color:#fff" onclick="submitDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Restore file input (hidden) -->
+<input type="file" id="restoreFile" accept=".json" style="display:none" onchange="submitRestore(this)">
+
+<script src="qrcode.min.js"></script>
+
+<script>
+const API = '/cgi-bin/awg-api';
+let confText = '';
+let confName = 'client';
+let prevStats = {};
+
+// ---- Theme ----
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+  updateThemeIcon(next);
+}
+function updateThemeIcon(t) {
+  const ic = document.getElementById('themeIcon');
+  if (t === 'light') {
+    ic.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+  } else {
+    ic.innerHTML = '<path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/>';
+  }
+}
+(function() {
+  const saved = localStorage.getItem('theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+  updateThemeIcon(saved);
+})();
+
+// ---- i18n & Language ----
+const I18N = {
+  en: {
+    panelTitle: 'Clients',
+    restore: 'Restore',
+    backup: 'Backup',
+    refresh: 'Refresh',
+    tooltipNew: 'New',
+    activity: 'Activity',
+    toggleTheme: 'Toggle theme',
+    emptyList: 'No clients yet. Click <b>+</b> to add one.',
+    apiError: 'API Error: ',
+    netError: 'Connection error: ',
+    online: 'Online',
+    never: 'Never',
+    justNow: 'Just now',
+    secAgo: 's ago',
+    minAgo: 'm ago',
+    hourAgo: 'h ago',
+    dayAgo: 'd ago',
+    tooltipToggle: 'Enable / Disable',
+    tooltipQr: 'QR code',
+    tooltipDownload: 'Download .conf',
+    tooltipEdit: 'Edit',
+    tooltipDelete: 'Delete',
+    modalCreateTitle: 'New AmneziaWG Client',
+    modalCreateNameLabel: 'Client Name',
+    modalCreateNamePlaceholder: 'e.g. Phone, Laptop',
+    cancel: 'Cancel',
+    create: 'Create',
+    creating: 'Creating...',
+    enterNameAlert: 'Please enter client name',
+    modalEditTitle: 'Edit Client',
+    modalEditNameLabel: 'Client Name',
+    modalEditNamePlaceholder: 'Name',
+    modalEditIpLabel: 'IP Address (allowed_ips)',
+    save: 'Save',
+    saving: 'Saving...',
+    qrClientPrefix: 'Client: ',
+    qrTitle: 'Configuration',
+    copy: 'Copy',
+    downloadConf: 'Download .conf',
+    copiedAlert: 'Copied!',
+    copyFailedAlert: 'Failed to copy',
+    noConfigAlert: 'No configuration: ',
+    modalDeleteTitle: 'Delete Client?',
+    deleteWarning: 'Are you sure you want to delete client',
+    delete: 'Delete',
+    deleting: 'Deleting...',
+    deleteFailed: 'Failed to delete client: ',
+    backupFailed: 'Backup error: ',
+    restoreInvalidFile: 'Invalid backup file format',
+    restoreConfirm: (file) => `Restore clients from "${file}"? Existing clients will not be affected.`,
+    restoreSuccess: (count) => `Restored clients: ${count}`,
+    restoreFailed: 'Restore error: ',
+  },
+  ru: {
+    panelTitle: 'Клиенты',
+    restore: 'Восстановить',
+    backup: 'Резервная копия',
+    refresh: 'Обновить',
+    tooltipNew: 'Новый клиент',
+    activity: 'Сетевая активность',
+    toggleTheme: 'Переключить тему',
+    emptyList: 'Нет клиентов. Нажмите <b>+</b>, чтобы добавить.',
+    apiError: 'Ошибка API: ',
+    netError: 'Сбой связи: ',
+    online: 'В сети',
+    never: 'Никогда',
+    justNow: 'Только что',
+    secAgo: ' сек назад',
+    minAgo: ' мин назад',
+    hourAgo: ' ч назад',
+    dayAgo: ' д назад',
+    tooltipToggle: 'Вкл / Выкл',
+    tooltipQr: 'QR-код',
+    tooltipDownload: 'Скачать .conf',
+    tooltipEdit: 'Редактировать',
+    tooltipDelete: 'Удалить',
+    modalCreateTitle: 'Новый клиент AmneziaWG',
+    modalCreateNameLabel: 'Имя клиента',
+    modalCreateNamePlaceholder: 'напр. Телефон, Ноутбук',
+    cancel: 'Отмена',
+    create: 'Создать',
+    creating: 'Создание...',
+    enterNameAlert: 'Введите имя клиента',
+    modalEditTitle: 'Редактировать клиента',
+    modalEditNameLabel: 'Имя клиента',
+    modalEditNamePlaceholder: 'Имя',
+    modalEditIpLabel: 'IP-адрес (allowed_ips)',
+    save: 'Сохранить',
+    saving: 'Сохранение...',
+    qrClientPrefix: 'Клиент: ',
+    qrTitle: 'Конфигурация',
+    copy: 'Копировать',
+    downloadConf: 'Скачать .conf',
+    copiedAlert: 'Скопировано!',
+    copyFailedAlert: 'Не удалось скопировать',
+    noConfigAlert: 'Конфигурация недоступна: ',
+    modalDeleteTitle: 'Удалить клиента?',
+    deleteWarning: 'Вы уверены, что хотите удалить клиента',
+    delete: 'Удалить',
+    deleting: 'Удаление...',
+    deleteFailed: 'Ошибка удаления: ',
+    backupFailed: 'Ошибка бэкапа: ',
+    restoreInvalidFile: 'Неверный формат файла бэкапа',
+    restoreConfirm: (file) => `Восстановить клиентов из файла «${file}»? Существующие клиенты затронуты не будут.`,
+    restoreSuccess: (count) => `Восстановлено клиентов: ${count}`,
+    restoreFailed: 'Ошибка восстановления: ',
+  }
+};
+
+function detectSystemLang() {
+  const navLangs = navigator.languages || [navigator.language || ''];
+  for (const l of navLangs) {
+    if (!l) continue;
+    const lower = l.toLowerCase();
+    if (lower.startsWith('ru') || lower.startsWith('be') || lower.startsWith('uk') || lower.startsWith('kk')) {
+      return 'ru';
+    }
+  }
+  return 'en';
+}
+
+function getInitialLang() {
+  const saved = localStorage.getItem('awgit_lang');
+  if (saved === 'ru' || saved === 'en') return saved;
+  return 'en';
+}
+
+let currentLang = 'en';
+let lastClientsData = null;
+let currentDeleteName = '';
+
+function setLang(lang) {
+  if (lang !== 'ru' && lang !== 'en') lang = 'en';
+  currentLang = lang;
+  localStorage.setItem('awgit_lang', lang);
+  document.documentElement.lang = lang;
+
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-lang') === lang);
+  });
+
+  const t = I18N[lang];
+
+  const panelTitle = document.getElementById('panelTitle');
+  if (panelTitle) panelTitle.textContent = t.panelTitle;
+
+  const btnRestore = document.getElementById('btnRestoreLabel');
+  if (btnRestore) btnRestore.textContent = t.restore;
+
+  const btnBackup = document.getElementById('btnBackupLabel');
+  if (btnBackup) btnBackup.textContent = t.backup;
+
+  const btnRefresh = document.getElementById('btnRefreshLabel');
+  if (btnRefresh) btnRefresh.textContent = t.refresh;
+
+  const btnAdd = document.getElementById('btnAddClient');
+  if (btnAdd) btnAdd.title = t.tooltipNew;
+
+  const themeBtn = document.getElementById('themeBtn');
+  if (themeBtn) themeBtn.title = t.toggleTheme;
+
+  const mCreateTitle = document.getElementById('modalCreateTitle');
+  if (mCreateTitle) mCreateTitle.textContent = t.modalCreateTitle;
+
+  const mCreateLabel = document.getElementById('modalCreateNameLabel');
+  if (mCreateLabel) mCreateLabel.textContent = t.modalCreateNameLabel;
+
+  const createInput = document.getElementById('createName');
+  if (createInput) createInput.placeholder = t.modalCreateNamePlaceholder;
+
+  const mCreateCancel = document.getElementById('modalCreateCancel');
+  if (mCreateCancel) mCreateCancel.textContent = t.cancel;
+
+  const btnCreate = document.getElementById('btnCreate');
+  if (btnCreate && !btnCreate.disabled) btnCreate.textContent = t.create;
+
+  const mEditTitle = document.getElementById('modalEditTitle');
+  if (mEditTitle) mEditTitle.textContent = t.modalEditTitle;
+
+  const mEditNameLabel = document.getElementById('modalEditNameLabel');
+  if (mEditNameLabel) mEditNameLabel.textContent = t.modalEditNameLabel;
+
+  const editName = document.getElementById('editName');
+  if (editName) editName.placeholder = t.modalEditNamePlaceholder;
+
+  const mEditIpLabel = document.getElementById('modalEditIpLabel');
+  if (mEditIpLabel) mEditIpLabel.textContent = t.modalEditIpLabel;
+
+  const mEditCancel = document.getElementById('modalEditCancel');
+  if (mEditCancel) mEditCancel.textContent = t.cancel;
+
+  const btnEdit = document.getElementById('btnEdit');
+  if (btnEdit && !btnEdit.disabled) btnEdit.textContent = t.save;
+
+  const qrTitle = document.getElementById('qrTitle');
+  if (qrTitle) qrTitle.textContent = confName ? (t.qrClientPrefix + confName) : t.qrTitle;
+
+  const btnCopyConf = document.getElementById('btnCopyConf');
+  if (btnCopyConf) btnCopyConf.textContent = t.copy;
+
+  const btnDownload = document.getElementById('btnDownload');
+  if (btnDownload) btnDownload.textContent = t.downloadConf;
+
+  const mDeleteTitle = document.getElementById('modalDeleteTitle');
+  if (mDeleteTitle) mDeleteTitle.textContent = t.modalDeleteTitle;
+
+  const deleteWarningMsg = document.getElementById('deleteWarningMsg');
+  if (deleteWarningMsg) deleteWarningMsg.textContent = t.deleteWarning;
+
+  const nameEl = document.getElementById('deleteClientName');
+  if (nameEl && currentDeleteName) nameEl.textContent = '«' + currentDeleteName + '»';
+
+  const mDeleteCancel = document.getElementById('modalDeleteCancel');
+  if (mDeleteCancel) mDeleteCancel.textContent = t.cancel;
+
+  const btnDeleteSubmit = document.getElementById('btnDeleteSubmit');
+  if (btnDeleteSubmit && !btnDeleteSubmit.disabled) btnDeleteSubmit.textContent = t.delete;
+
+  if (lastClientsData) {
+    renderPeerList(lastClientsData);
+  }
+}
+
+// ---- Helpers ----
+function escapeHtml(str) {
+  return String(str || '').replace(/[&<>"']/g, m => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[m]);
+}
+function escapeJs(str) {
+  return String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+}
+function fmtBytes(b) {
+  if (!b || b == 0) return '0 B';
+  const k = 1024, s = ['B','KB','MB','GB','TB'];
+  const i = Math.floor(Math.log(b) / Math.log(k));
+  return (b / Math.pow(k, i)).toFixed(1) + ' ' + s[i];
+}
+function fmtSpeed(bps) {
+  if (!bps || bps <= 0) return '0 B/s';
+  const k = 1024, s = ['B/s','KB/s','MB/s','GB/s'];
+  const i = Math.floor(Math.log(bps) / Math.log(k));
+  return (bps / Math.pow(k, i)).toFixed(1) + ' ' + s[i];
+}
+function fmtHandshake(ts) {
+  const t = I18N[currentLang];
+  if (!ts || ts == 0) return t.never;
+  const d = Math.floor(Date.now()/1000) - ts;
+  if (d < 0) return t.justNow;
+  if (d < 60) return d + t.secAgo;
+  if (d < 3600) return Math.floor(d/60) + t.minAgo;
+  if (d < 86400) return Math.floor(d/3600) + t.hourAgo;
+  return Math.floor(d/86400) + t.dayAgo;
+}
+
+// ---- Modals ----
+function openModal(id) { document.getElementById(id).classList.add('show'); }
+function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+
+// ---- Fetch & Render ----
+async function fetchClients() {
+  try {
+    const res = await fetch(`${API}?action=status`);
+    const data = await res.json();
+    lastClientsData = data;
+    renderPeerList(data);
+  } catch(e) {
+    const t = I18N[currentLang];
+    document.getElementById('clientsList').innerHTML = `<div class="empty">${t.netError}${escapeHtml(e.message)}</div>`;
+  }
+}
+
+let clientHistory = {};
+const MAX_HISTORY = 12;
+
+function renderSparkline(pts, id) {
+  const w = 120, h = 26;
+  const data = (pts && pts.length >= 2) ? pts : [0, 0];
+  const max = Math.max(1024, ...data);
+  const n = data.length;
+  const step = w / (n - 1);
+
+  const coords = data.map((v, i) => {
+    const x = +(i * step).toFixed(1);
+    const ratio = Math.min(1, Math.max(0, v / max));
+    const y = +(h - 3 - ratio * (h - 7)).toFixed(1);
+    return [x, y];
+  });
+
+  const lineD = coords.reduce((acc, c, i) => i === 0 ? `M ${c[0]} ${c[1]}` : `${acc} L ${c[0]} ${c[1]}`, '');
+  const areaD = `${lineD} L ${w} ${h} L 0 ${h} Z`;
+
+  const lastVal = data[data.length - 1] || 0;
+  const hasTraffic = lastVal > 150;
+  const gradId = 'sg_' + String(id || '').replace(/[^a-zA-Z0-9]/g, '').slice(0, 10);
+  const color = hasTraffic ? 'var(--green)' : 'rgba(155,161,166,0.3)';
+
+  return `<svg class="sparkline" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <defs>
+      <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="var(--green)" stop-opacity="${hasTraffic ? '0.35' : '0.04'}"/>
+        <stop offset="100%" stop-color="var(--green)" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <path d="${areaD}" fill="url(#${gradId})"/>
+    <path d="${lineD}" fill="none" stroke="${color}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function renderPeerList(data) {
+  const t = I18N[currentLang];
+  if (!data) return;
+  if (data.status !== 'ok') {
+    document.getElementById('clientsList').innerHTML = `<div class="empty">${t.apiError}${escapeHtml(data.message||'?')}</div>`;
+    return;
+  }
+  const s = data.server;
+  if (s) {
+    document.getElementById('serverInfo').innerHTML =
+      `<span>${escapeHtml(s.interface)}</span> • <span>:${escapeHtml(s.listen_port)}</span><span class="server-sep-ep"> • </span><span class="server-ep">${escapeHtml(s.endpoint)}</span>`;
+  }
+
+  const list = document.getElementById('clientsList');
+  if (!data.peers || data.peers.length === 0) {
+    list.innerHTML = `<div class="empty">${t.emptyList}</div>`;
+    prevStats = {};
+    return;
+  }
+
+  const now = Date.now() / 1000;
+  list.innerHTML = data.peers.map(p => {
+    const pub = p.public_key;
+    const prev = prevStats[pub] || {};
+    const elapsed = (prev.ts && now > prev.ts) ? (now - prev.ts) : 3;
+    const rxSpeed = (prev.rx != null && elapsed > 0) ? Math.max(0, (p.transfer_rx - prev.rx) / elapsed) : 0;
+    const txSpeed = (prev.tx != null && elapsed > 0) ? Math.max(0, (p.transfer_tx - prev.tx) / elapsed) : 0;
+    const totalSpeed = rxSpeed + txSpeed;
+
+    if (!clientHistory[pub]) {
+      clientHistory[pub] = new Array(MAX_HISTORY).fill(0);
+    }
+    if (prev.ts && now > prev.ts) {
+      clientHistory[pub].push(totalSpeed);
+      if (clientHistory[pub].length > MAX_HISTORY) {
+        clientHistory[pub].shift();
+      }
+    }
+    prevStats[pub] = { rx: p.transfer_rx, tx: p.transfer_tx, ts: now };
+
+    const online = p.online;
+    const chk = (p.disabled == 0 || p.disabled === false) ? 'checked' : '';
+    const safeName = escapeHtml(p.name);
+    const jsName = escapeJs(p.name);
+    const safeIp = escapeHtml(p.allowed_ips);
+
+    return `<div class="client-card">
+      <div class="avatar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+      <div class="client-meta">
+        <div class="client-name">${safeName}</div>
+        <div class="client-sub">
+          <span>${safeIp}</span>
+          <span>•</span>
+          <span class="status-dot ${online?'online':''}"></span>
+          <span>${online ? t.online : fmtHandshake(p.latest_handshake)}</span>
+        </div>
+      </div>
+      <div class="client-chart" title="${t.activity}: ${fmtSpeed(totalSpeed)}">
+        ${renderSparkline(clientHistory[pub], pub)}
+      </div>
+      <div class="client-speed">
+        <div class="speed-item">
+          <span class="speed-val">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+            ${fmtSpeed(rxSpeed)}
+          </span>
+          <span class="speed-bps">${fmtBytes(p.transfer_rx)}</span>
+        </div>
+        <div class="speed-item">
+          <span class="speed-val">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+            ${fmtSpeed(txSpeed)}
+          </span>
+          <span class="speed-bps">${fmtBytes(p.transfer_tx)}</span>
+        </div>
+      </div>
+      <div class="client-toggle">
+        <label class="switch" title="${t.tooltipToggle}">
+          <input type="checkbox" ${chk} onchange="doToggle('${pub}', this.checked)">
+          <span class="slider"></span>
+        </label>
+      </div>
+      <div class="action-btns">
+        <button class="btn-icon" title="${t.tooltipQr}" onclick="openQr('${pub}')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="4" height="4"/><line x1="21" y1="14" x2="21" y2="14.01"/><line x1="14" y1="21" x2="14" y2="21.01"/><line x1="21" y1="21" x2="21" y2="21.01"/></svg></button>
+        <button class="btn-icon download" title="${t.tooltipDownload}" onclick="downloadConf('${pub}','${jsName}')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+        <button class="btn-icon edit" title="${t.tooltipEdit}" onclick="openEdit('${pub}','${jsName}','${safeIp}')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="btn-icon danger" title="${t.tooltipDelete}" onclick="openDelete('${pub}','${jsName}')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ---- Create ----
+function openCreateModal() {
+  document.getElementById('createName').value = '';
+  openModal('createModal');
+  setTimeout(() => document.getElementById('createName').focus(), 60);
+}
+async function submitCreate() {
+  const t = I18N[currentLang];
+  const name = document.getElementById('createName').value.trim();
+  if (!name) return alert(t.enterNameAlert);
+  const btn = document.getElementById('btnCreate');
+  btn.disabled = true; btn.textContent = t.creating;
+  try {
+    const res = await fetch(`${API}?action=create&name=${encodeURIComponent(name)}`, { method: 'POST' });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      closeModal('createModal');
+      showQrModal(data.peer.name, data.peer.config);
+      fetchClients();
+    } else alert(t.apiError + (data.message||'?'));
+  } catch(e) { alert(t.netError + e.message); }
+  finally { btn.disabled = false; btn.textContent = t.create; }
+}
+
+// ---- Edit ----
+function openEdit(pub, name, ip) {
+  document.getElementById('editPubKey').value = pub;
+  document.getElementById('editName').value = name;
+  document.getElementById('editIp').value = ip;
+  openModal('editModal');
+  setTimeout(() => document.getElementById('editName').focus(), 60);
+}
+async function submitEdit() {
+  const t = I18N[currentLang];
+  const pub = document.getElementById('editPubKey').value;
+  const name = document.getElementById('editName').value.trim();
+  const ip = document.getElementById('editIp').value.trim();
+  if (!name) return alert(t.enterNameAlert);
+  const btn = document.getElementById('btnEdit');
+  btn.disabled = true; btn.textContent = t.saving;
+  try {
+    const res = await fetch(`${API}?action=update&public_key=${encodeURIComponent(pub)}&name=${encodeURIComponent(name)}&allowed_ips=${encodeURIComponent(ip)}`, { method: 'POST' });
+    const data = await res.json();
+    if (data.status === 'ok') { closeModal('editModal'); fetchClients(); }
+    else alert(t.apiError + (data.message||'?'));
+  } catch(e) { alert(t.netError + e.message); }
+  finally { btn.disabled = false; btn.textContent = t.save; }
+}
+
+// ---- QR & Download ----
+async function openQr(pub) {
+  const t = I18N[currentLang];
+  try {
+    const res = await fetch(`${API}?action=client_config&public_key=${encodeURIComponent(pub)}`);
+    const data = await res.json();
+    if (data.status === 'ok') showQrModal(data.name, data.config);
+    else alert(t.noConfigAlert + (data.message||'?'));
+  } catch(e) { alert(t.netError + e.message); }
+}
+function showQrModal(name, cfg) {
+  const t = I18N[currentLang];
+  confText = cfg; confName = name;
+  document.getElementById('qrTitle').textContent = t.qrClientPrefix + name;
+  document.getElementById('confPreview').textContent = cfg;
+  const box = document.getElementById('qrBox');
+  box.innerHTML = '';
+  new QRCode(box, { text: cfg, width: 256, height: 256, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M });
+  document.getElementById('btnDownload').onclick = () => {
+    triggerDownload(name, cfg);
+  };
+  openModal('qrModal');
+}
+function triggerDownload(name, cfg) {
+  const fileName = (name || 'client') + '.conf';
+  const blob = new Blob([cfg], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+}
+async function downloadConf(pub, name) {
+  const t = I18N[currentLang];
+  try {
+    const res = await fetch(`${API}?action=client_config&public_key=${encodeURIComponent(pub)}`);
+    const data = await res.json();
+    if (data.status === 'ok') {
+      triggerDownload(data.name || name, data.config);
+    } else {
+      alert(t.noConfigAlert + (data.message || '?'));
+    }
+  } catch(e) {
+    alert(t.netError + e.message);
+  }
+}
+function copyConf() {
+  const t = I18N[currentLang];
+  if (!confText) return;
+  navigator.clipboard.writeText(confText).then(() => alert(t.copiedAlert)).catch(() => alert(t.copyFailedAlert));
+}
+
+// ---- Toggle ----
+async function doToggle(pub, enabled) {
+  const disabled = enabled ? '0' : '1';
+  try {
+    await fetch(`${API}?action=toggle&public_key=${encodeURIComponent(pub)}&disabled=${disabled}`, { method: 'POST' });
+    fetchClients();
+  } catch(e) {
+    console.error('Toggle error:', e);
+  }
+}
+
+// ---- Delete ----
+function openDelete(pub, name) {
+  currentDeleteName = name;
+  document.getElementById('deletePubKey').value = pub;
+  const nameEl = document.getElementById('deleteClientName');
+  if (nameEl) nameEl.textContent = '«' + name + '»';
+  openModal('deleteModal');
+}
+async function submitDelete() {
+  const t = I18N[currentLang];
+  const pub = document.getElementById('deletePubKey').value;
+  const btn = document.getElementById('btnDeleteSubmit');
+  btn.disabled = true; btn.textContent = t.deleting;
+  try {
+    const res = await fetch(`${API}?action=delete&public_key=${encodeURIComponent(pub)}`, { method: 'POST' });
+    const data = await res.json();
+    if (data.status === 'ok') {
+      closeModal('deleteModal');
+      fetchClients();
+    } else {
+      alert(t.deleteFailed + (data.message || '?'));
+    }
+  } catch(e) {
+    alert(t.netError + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = t.delete;
+  }
+}
+
+// ---- Backup ----
+async function doBackup() {
+  const t = I18N[currentLang];
+  try {
+    const res = await fetch(`${API}?action=backup`);
+    const data = await res.json();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}));
+    a.download = 'awgit-backup-' + new Date().toISOString().slice(0,10) + '.json';
+    a.click();
+  } catch(e) { alert(t.backupFailed + e.message); }
+}
+
+// ---- Restore ----
+function doRestore() { document.getElementById('restoreFile').click(); }
+async function submitRestore(input) {
+  const t = I18N[currentLang];
+  const file = input.files[0];
+  if (!file) return;
+  const text = await file.text();
+  try {
+    JSON.parse(text);
+  } catch(e) { alert(t.restoreInvalidFile); input.value=''; return; }
+  if (!confirm(t.restoreConfirm(file.name))) { input.value=''; return; }
+  try {
+    const res = await fetch(`${API}?action=restore`, { method: 'POST', headers:{'Content-Type':'application/json'}, body: text });
+    const data = await res.json();
+    alert(t.restoreSuccess(data.restored ?? '?'));
+    fetchClients();
+  } catch(e) { alert(t.restoreFailed + e.message); }
+  input.value = '';
+}
+
+// ---- Init & Dynamic Polling ----
+let pollTimer = null;
+let pollIntervalMs = 3000;
+
+function startPolling(interval) {
+  if (pollTimer) clearInterval(pollTimer);
+  pollIntervalMs = interval;
+  pollTimer = setInterval(fetchClients, pollIntervalMs);
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    startPolling(15000); // 15s in background
+  } else {
+    fetchClients();
+    startPolling(3000);  // 3s when active
+  }
+});
+
+(function() {
+  const initialLang = getInitialLang();
+  setLang(initialLang);
+})();
+fetchClients();
+startPolling(3000);
+</script>
+</body>
+</html>

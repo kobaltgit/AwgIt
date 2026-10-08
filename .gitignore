@@ -1,0 +1,28 @@
+# Private Chronicles / Author Devlogs (do not publish)
+docs/CHRONICLE.md
+docs/CHRONICLE*.md
+*CHRONICLE*
+
+# Backups & Client configs
+*.conf
+awgit-backup-*.json
+
+# Screenshots & sensitive media
+*.png
+ui_screenshot.png
+
+# OS generated files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Editor / IDE configs
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Temporary files & logs
+*.tmp
+*.bak
+*.log

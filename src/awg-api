@@ -1,0 +1,502 @@
+#!/bin/sh
+# AwgIt Backend CGI API for OpenWrt
+# Zero-daemon architecture: executed on-demand by uhttpd
+
+# Output JSON header
+printf "Content-Type: application/json; charset=utf-8\r\n"
+printf "Cache-Control: no-cache, no-store, must-revalidate\r\n"
+printf "Access-Control-Allow-Origin: *\r\n"
+printf "Access-Control-Allow-Methods: GET, POST, OPTIONS\r\n"
+printf "Access-Control-Allow-Headers: Content-Type\r\n\r\n"
+
+if [ "$REQUEST_METHOD" = "OPTIONS" ]; then
+    exit 0
+fi
+
+WG_IF="awg0"
+WG_BIN="/usr/bin/amneziawg"
+[ -x "$WG_BIN" ] || WG_BIN="/usr/bin/awg"
+
+# Helper: URL decode
+urldecode() {
+    printf '%b' "${1//%/\\x}" 2>/dev/null || printf '%s' "$1"
+}
+
+# Helper: parse query / body
+QUERY="$QUERY_STRING"
+RAW_BODY=""
+if [ "$REQUEST_METHOD" = "POST" ]; then
+    if [ -n "$CONTENT_LENGTH" ] && [ "$CONTENT_LENGTH" -gt 0 ] 2>/dev/null; then
+        RAW_BODY=$(head -c "$CONTENT_LENGTH")
+    else
+        RAW_BODY=$(cat)
+    fi
+    if [ -n "$RAW_BODY" ]; then
+        if printf '%s' "$RAW_BODY" | grep -q '^{' ; then
+            QUERY=""
+        else
+            QUERY="$RAW_BODY"
+        fi
+    fi
+fi
+
+ACTION=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^action=' | head -n 1 | cut -d '=' -f 2)
+ACTION=$(urldecode "$ACTION")
+
+# Check if action was passed in URL for POST requests
+if [ -z "$ACTION" ] && [ -n "$QUERY_STRING" ]; then
+    ACTION=$(printf '%s' "$QUERY_STRING" | tr '&' '\n' | grep '^action=' | head -n 1 | cut -d '=' -f 2)
+    ACTION=$(urldecode "$ACTION")
+fi
+
+[ -z "$ACTION" ] && ACTION="status"
+
+# Fetch server params from UCI
+SERVER_PORT=$(uci -q get network.${WG_IF}.listen_port || echo "49155")
+SERVER_PRIV=$(uci -q get network.${WG_IF}.private_key)
+SERVER_PUB=""
+if [ -n "$SERVER_PRIV" ] && [ -x "$WG_BIN" ]; then
+    SERVER_PUB=$(printf '%s' "$SERVER_PRIV" | $WG_BIN pubkey 2>/dev/null)
+fi
+
+JC=$(uci -q get network.${WG_IF}.awg_jc || echo "4")
+JMIN=$(uci -q get network.${WG_IF}.awg_jmin || echo "40")
+JMAX=$(uci -q get network.${WG_IF}.awg_jmax || echo "70")
+S1=$(uci -q get network.${WG_IF}.awg_s1 || echo "15")
+S2=$(uci -q get network.${WG_IF}.awg_s2 || echo "32")
+H1=$(uci -q get network.${WG_IF}.awg_h1 || echo "1")
+H2=$(uci -q get network.${WG_IF}.awg_h2 || echo "2")
+H3=$(uci -q get network.${WG_IF}.awg_h3 || echo "3")
+H4=$(uci -q get network.${WG_IF}.awg_h4 || echo "4")
+
+EXT_IP=$(uci -q get network.${WG_IF}.endpoint_host)
+[ -z "$EXT_IP" ] && EXT_IP="62.16.41.168"
+
+NOW=$(date +%s)
+
+# Helper: Build client conf string
+generate_conf() {
+    _client_ip="$1"
+    _client_priv="$2"
+    printf "[Interface]\nAddress = %s\nPrivateKey = %s\nDNS = 10.9.0.1, 77.88.8.8\nJc = %s\nJmin = %s\nJmax = %s\nS1 = %s\nS2 = %s\nH1 = %s\nH2 = %s\nH3 = %s\nH4 = %s\n\n[Peer]\nPublicKey = %s\nEndpoint = %s:%s\nAllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 25\n" \
+        "$_client_ip" "$_client_priv" "$JC" "$JMIN" "$JMAX" "$S1" "$S2" "$H1" "$H2" "$H3" "$H4" "$SERVER_PUB" "$EXT_IP" "$SERVER_PORT"
+}
+
+# ==========================================================
+# ACTION: STATUS / LIST
+# ==========================================================
+if [ "$ACTION" = "status" ] || [ "$ACTION" = "list" ]; then
+    TMP_DUMP="/tmp/awg_dump_$$"
+    $WG_BIN show "$WG_IF" dump 2>/dev/null > "$TMP_DUMP" || true
+
+    printf '{\n'
+    printf '  "status": "ok",\n'
+    printf '  "server": {\n'
+    printf '    "interface": "%s",\n' "$WG_IF"
+    printf '    "public_key": "%s",\n' "$SERVER_PUB"
+    printf '    "listen_port": %s,\n' "$SERVER_PORT"
+    printf '    "endpoint": "%s:%s",\n' "$EXT_IP" "$SERVER_PORT"
+    printf '    "awg_params": {\n'
+    printf '      "jc": %s, "jmin": %s, "jmax": %s,\n' "$JC" "$JMIN" "$JMAX"
+    printf '      "s1": %s, "s2": %s,\n' "$S1" "$S2"
+    printf '      "h1": %s, "h2": %s, "h3": %s, "h4": %s\n' "$H1" "$H2" "$H3" "$H4"
+    printf '    }\n'
+    printf '  },\n'
+    printf '  "peers": [\n'
+
+    FIRST_PEER=1
+    SECTIONS=$(uci show network | grep '=amneziawg_awg0' | cut -d '.' -f 2 | cut -d '=' -f 1)
+
+    for SEC in $SECTIONS; do
+        NAME=$(uci -q get network.${SEC}.description)
+        [ -z "$NAME" ] && NAME="Client-${SEC}"
+        PUB=$(uci -q get network.${SEC}.public_key)
+        PRIV=$(uci -q get network.${SEC}.private_key)
+        ALLOWED_IP=$(uci -q get network.${SEC}.allowed_ips)
+        DISABLED=$(uci -q get network.${SEC}.disabled || echo "0")
+
+        HAS_CONF="false"
+        [ -n "$PRIV" ] && HAS_CONF="true"
+
+        RX="0"
+        TX="0"
+        LATEST="0"
+        ENDPOINT=""
+
+        if [ -f "$TMP_DUMP" ] && [ -n "$PUB" ]; then
+            DUMP_LINE=$(grep "^${PUB}" "$TMP_DUMP" | head -n 1)
+            if [ -n "$DUMP_LINE" ]; then
+                ENDPOINT=$(printf '%s' "$DUMP_LINE" | awk '{print $3}')
+                LATEST=$(printf '%s' "$DUMP_LINE" | awk '{print $5}')
+                RX=$(printf '%s' "$DUMP_LINE" | awk '{print $6}')
+                TX=$(printf '%s' "$DUMP_LINE" | awk '{print $7}')
+            fi
+        fi
+
+        [ -z "$RX" ] && RX="0"
+        [ -z "$TX" ] && TX="0"
+        [ -z "$LATEST" ] && LATEST="0"
+
+        ONLINE="false"
+        if [ "$LATEST" -gt 0 ] && [ $((NOW - LATEST)) -lt 180 ]; then
+            ONLINE="true"
+        fi
+
+        if [ "$FIRST_PEER" -eq 0 ]; then
+            printf ',\n'
+        fi
+        FIRST_PEER=0
+
+        printf '    {\n'
+        printf '      "section": "%s",\n' "$SEC"
+        printf '      "name": "%s",\n' "$NAME"
+        printf '      "public_key": "%s",\n' "$PUB"
+        printf '      "allowed_ips": "%s",\n' "$ALLOWED_IP"
+        printf '      "has_config": %s,\n' "$HAS_CONF"
+        printf '      "disabled": %s,\n' "$DISABLED"
+        printf '      "online": %s,\n' "$ONLINE"
+        printf '      "latest_handshake": %s,\n' "$LATEST"
+        printf '      "transfer_rx": %s,\n' "$RX"
+        printf '      "transfer_tx": %s,\n' "$TX"
+        printf '      "endpoint": "%s"\n' "$ENDPOINT"
+        printf '    }'
+    done
+
+    rm -f "$TMP_DUMP"
+    printf '\n  ]\n}\n'
+    exit 0
+fi
+
+# ==========================================================
+# ACTION: CLIENT CONFIG (FOR QR & DOWNLOAD)
+# ==========================================================
+if [ "$ACTION" = "client_config" ]; then
+    TARGET_PUB=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^public_key=' | head -n 1 | cut -d '=' -f 2)
+    TARGET_PUB=$(urldecode "$TARGET_PUB")
+
+    SECTIONS=$(uci show network | grep '=amneziawg_awg0' | cut -d '.' -f 2 | cut -d '=' -f 1)
+    for SEC in $SECTIONS; do
+        PUB=$(uci -q get network.${SEC}.public_key)
+        if [ "$PUB" = "$TARGET_PUB" ]; then
+            NAME=$(uci -q get network.${SEC}.description || echo "client")
+            PRIV=$(uci -q get network.${SEC}.private_key)
+            ALLOWED_IP=$(uci -q get network.${SEC}.allowed_ips | cut -d '/' -f 1)
+            [ -z "$ALLOWED_IP" ] && ALLOWED_IP="10.9.0.2"
+
+            if [ -z "$PRIV" ]; then
+                printf '{"status":"error","message":"Private key not stored for this peer"}\n'
+                exit 0
+            fi
+
+            CONF=$(generate_conf "${ALLOWED_IP}/24" "$PRIV")
+            CONF_JSON=$(printf '%s' "$CONF" | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g')
+
+            printf '{\n'
+            printf '  "status": "ok",\n'
+            printf '  "name": "%s",\n' "$NAME"
+            printf '  "config": "%s"\n' "$CONF_JSON"
+            printf '}\n'
+            exit 0
+        fi
+    done
+
+    printf '{"status":"error","message":"Peer not found"}\n'
+    exit 0
+fi
+
+# ==========================================================
+# ACTION: REGENERATE KEYS FOR PEER
+# ==========================================================
+if [ "$ACTION" = "regen_keys" ]; then
+    TARGET_PUB=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^public_key=' | head -n 1 | cut -d '=' -f 2)
+    TARGET_PUB=$(urldecode "$TARGET_PUB")
+    [ -z "$TARGET_PUB" ] && { printf '{"status":"error","message":"Missing public_key"}\n'; exit 0; }
+
+    SECTIONS=$(uci show network | grep '=amneziawg_awg0' | cut -d '.' -f 2 | cut -d '=' -f 1)
+    FOUND=0
+    for SEC in $SECTIONS; do
+        PUB=$(uci -q get network.${SEC}.public_key)
+        if [ "$PUB" = "$TARGET_PUB" ]; then
+            FOUND=1
+            NAME=$(uci -q get network.${SEC}.description || echo "client")
+            ALLOWED_IP=$(uci -q get network.${SEC}.allowed_ips)
+            DISABLED=$(uci -q get network.${SEC}.disabled || echo "0")
+
+            NEW_PRIV=$($WG_BIN genkey)
+            NEW_PUB=$(printf '%s' "$NEW_PRIV" | $WG_BIN pubkey)
+
+            uci set network.${SEC}.public_key="$NEW_PUB"
+            uci set network.${SEC}.private_key="$NEW_PRIV"
+            uci commit network
+
+            $WG_BIN set "$WG_IF" peer "$TARGET_PUB" remove 2>/dev/null || true
+            if [ "$DISABLED" != "1" ]; then
+                $WG_BIN set "$WG_IF" peer "$NEW_PUB" allowed-ips "$ALLOWED_IP" persistent-keepalive 25 2>/dev/null || true
+            fi
+
+            CLIENT_IP_NO_CIDR=$(printf '%s' "$ALLOWED_IP" | cut -d '/' -f 1)
+            CONF=$(generate_conf "${CLIENT_IP_NO_CIDR}/24" "$NEW_PRIV")
+            CONF_JSON=$(printf '%s' "$CONF" | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g')
+
+            printf '{\n'
+            printf '  "status": "ok",\n'
+            printf '  "name": "%s",\n' "$NAME"
+            printf '  "public_key": "%s",\n' "$NEW_PUB"
+            printf '  "config": "%s"\n' "$CONF_JSON"
+            printf '}\n'
+            exit 0
+        fi
+    done
+
+    printf '{"status":"error","message":"Peer not found"}\n'
+    exit 0
+fi
+
+
+# ==========================================================
+# ACTION: CREATE PEER
+# ==========================================================
+if [ "$ACTION" = "create" ]; then
+    RAW_NAME=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^name=' | head -n 1 | cut -d '=' -f 2)
+    NAME=$(urldecode "$RAW_NAME")
+    NAME=$(printf '%s' "$NAME" | tr -d "'\"\`\$\\;\n\r" | head -c 64)
+    [ -z "$NAME" ] && NAME="Client-$NOW"
+
+    PRIV_KEY=$($WG_BIN genkey)
+    PUB_KEY=$(printf '%s' "$PRIV_KEY" | $WG_BIN pubkey)
+
+    MAX_IP=1
+    ASSIGNED_IPS=$(uci show network | grep '\.allowed_ips=' | grep '10\.9\.0\.' | awk -F "['/]" '{print $2}' | cut -d '.' -f 4)
+    for IP_NUM in $ASSIGNED_IPS; do
+        if [ "$IP_NUM" -gt "$MAX_IP" ] 2>/dev/null; then
+            MAX_IP=$IP_NUM
+        fi
+    done
+    NEXT_IP=$((MAX_IP + 1))
+    CLIENT_IP="10.9.0.${NEXT_IP}"
+
+    SEC_NAME=$(uci add network amneziawg_awg0)
+    uci set network.${SEC_NAME}.description="$NAME"
+    uci set network.${SEC_NAME}.public_key="$PUB_KEY"
+    uci set network.${SEC_NAME}.private_key="$PRIV_KEY"
+    uci set network.${SEC_NAME}.allowed_ips="${CLIENT_IP}/32"
+    uci set network.${SEC_NAME}.persistent_keepalive="25"
+    uci commit network
+
+    $WG_BIN set "$WG_IF" peer "$PUB_KEY" allowed-ips "${CLIENT_IP}/32" persistent-keepalive 25
+
+    CONF=$(generate_conf "${CLIENT_IP}/24" "$PRIV_KEY")
+    CONF_JSON=$(printf '%s' "$CONF" | sed ':a;N;$!ba;s/\n/\\n/g' | sed 's/"/\\"/g')
+
+    printf '{\n'
+    printf '  "status": "ok",\n'
+    printf '  "message": "Peer created successfully",\n'
+    printf '  "peer": {\n'
+    printf '    "section": "%s",\n' "$SEC_NAME"
+    printf '    "name": "%s",\n' "$NAME"
+    printf '    "public_key": "%s",\n' "$PUB_KEY"
+    printf '    "allowed_ips": "%s/32",\n' "$CLIENT_IP"
+    printf '    "config": "%s"\n' "$CONF_JSON"
+    printf '  }\n'
+    printf '}\n'
+    exit 0
+fi
+
+# ==========================================================
+# ACTION: DELETE PEER
+# ==========================================================
+if [ "$ACTION" = "delete" ]; then
+    TARGET_PUB=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^public_key=' | head -n 1 | cut -d '=' -f 2)
+    TARGET_PUB=$(urldecode "$TARGET_PUB")
+
+    [ -z "$TARGET_PUB" ] && { printf '{"status":"error","message":"Missing public_key"}\n'; exit 0; }
+
+    SECTIONS=$(uci show network | grep '=amneziawg_awg0' | cut -d '.' -f 2 | cut -d '=' -f 1)
+    FOUND=0
+    for SEC in $SECTIONS; do
+        PUB=$(uci -q get network.${SEC}.public_key)
+        if [ "$PUB" = "$TARGET_PUB" ]; then
+            uci delete network.${SEC}
+            FOUND=1
+        fi
+    done
+
+    if [ "$FOUND" -eq 1 ]; then
+        uci commit network
+        $WG_BIN set "$WG_IF" peer "$TARGET_PUB" remove 2>/dev/null || true
+        printf '{"status":"ok","message":"Peer removed"}\n'
+    else
+        printf '{"status":"error","message":"Peer not found in config"}\n'
+    fi
+    exit 0
+fi
+
+# ==========================================================
+# ACTION: TOGGLE PEER
+# ==========================================================
+if [ "$ACTION" = "toggle" ]; then
+    TARGET_PUB=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^public_key=' | head -n 1 | cut -d '=' -f 2)
+    TARGET_PUB=$(urldecode "$TARGET_PUB")
+    STATE=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^disabled=' | head -n 1 | cut -d '=' -f 2)
+
+    SECTIONS=$(uci show network | grep '=amneziawg_awg0' | cut -d '.' -f 2 | cut -d '=' -f 1)
+    for SEC in $SECTIONS; do
+        PUB=$(uci -q get network.${SEC}.public_key)
+        if [ "$PUB" = "$TARGET_PUB" ]; then
+            ALLOWED_IP=$(uci -q get network.${SEC}.allowed_ips)
+            uci set network.${SEC}.disabled="$STATE"
+            uci commit network
+
+            if [ "$STATE" = "1" ]; then
+                $WG_BIN set "$WG_IF" peer "$TARGET_PUB" remove 2>/dev/null || true
+            else
+                $WG_BIN set "$WG_IF" peer "$TARGET_PUB" allowed-ips "$ALLOWED_IP" persistent-keepalive 25 2>/dev/null || true
+            fi
+            printf '{"status":"ok","message":"Peer state updated"}\n'
+            exit 0
+        fi
+    done
+
+    printf '{"status":"error","message":"Peer not found"}\n'
+    exit 0
+fi
+
+# ==========================================================
+# ACTION: UPDATE PEER (NAME & ALLOWED IPS)
+# ==========================================================
+if [ "$ACTION" = "update" ]; then
+    TARGET_PUB=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^public_key=' | head -n 1 | cut -d '=' -f 2)
+    TARGET_PUB=$(urldecode "$TARGET_PUB")
+    RAW_NAME=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^name=' | head -n 1 | cut -d '=' -f 2)
+    NEW_NAME=$(urldecode "$RAW_NAME")
+    NEW_NAME=$(printf '%s' "$NEW_NAME" | tr -d "'\"\`\$\\;\n\r" | head -c 64)
+
+    RAW_IP=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^allowed_ips=' | head -n 1 | cut -d '=' -f 2)
+    NEW_IP=$(urldecode "$RAW_IP")
+
+    [ -z "$TARGET_PUB" ] && { printf '{"status":"error","message":"Missing public_key"}\n'; exit 0; }
+
+    SECTIONS=$(uci show network | grep '=amneziawg_awg0' | cut -d '.' -f 2 | cut -d '=' -f 1)
+    FOUND=0
+    for SEC in $SECTIONS; do
+        PUB=$(uci -q get network.${SEC}.public_key)
+        if [ "$PUB" = "$TARGET_PUB" ]; then
+            FOUND=1
+            [ -n "$NEW_NAME" ] && uci set network.${SEC}.description="$NEW_NAME"
+            if [ -n "$NEW_IP" ]; then
+                case "$NEW_IP" in
+                    */*) ;;
+                    *) NEW_IP="${NEW_IP}/32" ;;
+                esac
+                uci set network.${SEC}.allowed_ips="$NEW_IP"
+                DISABLED=$(uci -q get network.${SEC}.disabled || echo "0")
+                if [ "$DISABLED" != "1" ]; then
+                    $WG_BIN set "$WG_IF" peer "$TARGET_PUB" allowed-ips "$NEW_IP" 2>/dev/null || true
+                fi
+            fi
+            uci commit network
+            printf '{"status":"ok","message":"Peer updated"}\n'
+            exit 0
+        fi
+    done
+
+    printf '{"status":"error","message":"Peer not found"}\n'
+    exit 0
+fi
+
+
+# ==========================================================
+# ACTION: BACKUP
+# ==========================================================
+if [ "$ACTION" = "backup" ]; then
+    printf '{\n'
+    printf '  "version": 1,\n'
+    printf '  "created_at": %s,\n' "$NOW"
+    printf '  "server": {\n'
+    printf '    "endpoint": "%s:%s",\n' "$EXT_IP" "$SERVER_PORT"
+    printf '    "public_key": "%s",\n' "$SERVER_PUB"
+    printf '    "listen_port": %s\n' "$SERVER_PORT"
+    printf '  },\n'
+    printf '  "peers": [\n'
+
+    FIRST_PEER=1
+    SECTIONS=$(uci show network | grep '=amneziawg_awg0' | cut -d '.' -f 2 | cut -d '=' -f 1)
+    for SEC in $SECTIONS; do
+        NAME=$(uci -q get network.${SEC}.description)
+        PUB=$(uci -q get network.${SEC}.public_key)
+        PRIV=$(uci -q get network.${SEC}.private_key)
+        ALLOWED_IP=$(uci -q get network.${SEC}.allowed_ips)
+        DISABLED=$(uci -q get network.${SEC}.disabled || echo "0")
+
+        if [ "$FIRST_PEER" -eq 0 ]; then
+            printf ',\n'
+        fi
+        FIRST_PEER=0
+
+        printf '    {\n'
+        printf '      "name": "%s",\n' "$NAME"
+        printf '      "public_key": "%s",\n' "$PUB"
+        printf '      "private_key": "%s",\n' "$PRIV"
+        printf '      "allowed_ips": "%s",\n' "$ALLOWED_IP"
+        printf '      "disabled": %s\n' "$DISABLED"
+        printf '    }'
+    done
+
+    printf '\n  ]\n}\n'
+    exit 0
+fi
+
+# ==========================================================
+# ACTION: RESTORE
+# ==========================================================
+if [ "$ACTION" = "restore" ]; then
+    if [ -z "$RAW_BODY" ]; then
+        printf '{"status":"error","message":"Empty backup data"}\n'
+        exit 0
+    fi
+
+    TMP_IN="/tmp/awg_restore_$$.json"
+    printf '%s' "$RAW_BODY" > "$TMP_IN"
+
+    RESTORED=0
+    idx=0
+    while true; do
+        R_PUB=$(jsonfilter -i "$TMP_IN" -e "@.peers[$idx].public_key" 2>/dev/null)
+        [ -z "$R_PUB" ] && break
+        R_NAME=$(jsonfilter -i "$TMP_IN" -e "@.peers[$idx].name" 2>/dev/null)
+        R_PRIV=$(jsonfilter -i "$TMP_IN" -e "@.peers[$idx].private_key" 2>/dev/null)
+        R_IP=$(jsonfilter -i "$TMP_IN" -e "@.peers[$idx].allowed_ips" 2>/dev/null)
+        R_DIS=$(jsonfilter -i "$TMP_IN" -e "@.peers[$idx].disabled" 2>/dev/null)
+
+        [ -z "$R_NAME" ] && R_NAME="Client-$idx"
+        [ -z "$R_DIS" ] && R_DIS="0"
+
+        if [ -n "$R_PUB" ] && [ -n "$R_IP" ]; then
+            # Check if peer already exists by public_key
+            EXISTS=$(uci show network | grep -F "public_key='${R_PUB}'" || true)
+            if [ -z "$EXISTS" ]; then
+                SEC=$(uci add network amneziawg_awg0)
+                uci set network.${SEC}.description="$R_NAME"
+                uci set network.${SEC}.public_key="$R_PUB"
+                [ -n "$R_PRIV" ] && uci set network.${SEC}.private_key="$R_PRIV"
+                uci set network.${SEC}.allowed_ips="$R_IP"
+                uci set network.${SEC}.persistent_keepalive="25"
+                uci set network.${SEC}.disabled="$R_DIS"
+                uci commit network
+
+                if [ "$R_DIS" != "1" ]; then
+                    $WG_BIN set "$WG_IF" peer "$R_PUB" allowed-ips "$R_IP" persistent-keepalive 25 2>/dev/null || true
+                fi
+                RESTORED=$((RESTORED + 1))
+            fi
+        fi
+        idx=$((idx + 1))
+    done
+
+    rm -f "$TMP_IN"
+    printf '{"status":"ok","message":"Restore processed","restored":%s}\n' "$RESTORED"
+    exit 0
+fi
+
+printf '{"status":"error","message":"Unknown action"}\n'
+exit 0

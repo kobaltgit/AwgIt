@@ -57,7 +57,6 @@ flowchart LR
 | :---------------------------------------------------- | :------------------------------------------------------------------------ |
 | [PROJECT_DESCRIPTION.md](docs/PROJECT_DESCRIPTION.md) | Full architectural specifications, component breakdown, and network model |
 | [ROADMAP.md](docs/ROADMAP.md)                         | Project roadmap, development phases, and milestone criteria               |
-| [CHRONICLE.md](docs/CHRONICLE.md)                     | Developer chronicle, design decisions, vibe-coding log, and incident diary |
 | [CHECKLIST_v0.2.0.md](docs/CHECKLIST_v0.2.0.md)       | Release v0.2.0 completion and verification checklist                      |
 | [BUGS_AND_ISSUES.md](docs/BUGS_AND_ISSUES.md)         | Network incident logs, kernel bug investigations, and applied solutions   |
 

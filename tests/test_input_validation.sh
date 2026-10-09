@@ -42,15 +42,23 @@ else
     echo "Short key rejected: OK"
 fi
 
-# Test safe name sanitization
+# Test safe name sanitization (replaces spaces with underscores)
 sanitize_name() {
-    # Keep only alphanumeric, hyphen, underscore, space, dot. Max 64 chars.
-    printf '%s' "$1" | sed 's/[^a-zA-Z0-9._ -]//g' | cut -c 1-64
+    printf '%s' "$1" | tr ' ' '_' | sed 's/[^a-zA-Z0-9._-]//g' | cut -c 1-64
 }
 
 clean_name=$(sanitize_name "My Phone (iPhone); rm -rf /")
 echo "Sanitized name: [$clean_name]"
-[ "$clean_name" = "My Phone iPhone rm -rf " ] || { echo "Sanitize name failed"; exit 1; }
+[ "$clean_name" = "My_Phone_iPhone_rm_-rf_" ] || { echo "Sanitize name failed"; exit 1; }
+
+# Test safe text sanitization (UTF-8, emojis, stripping dangerous shell chars)
+sanitize_text() {
+    printf '%s' "$1" | tr -d '\r\n"\\;`$&|><' | tr -d "'" | cut -c 1-128
+}
+
+clean_text=$(sanitize_text "📱 Телефон 1; \`reboot\`")
+echo "Sanitized text: [$clean_text]"
+[ "$clean_text" = "📱 Телефон 1 reboot" ] || { echo "Sanitize text failed"; exit 1; }
 
 # Test IP sanitization (IPv4 with optional /CIDR)
 is_valid_cidr() {

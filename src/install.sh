@@ -89,6 +89,7 @@ if [ -f /etc/openwrt_release ] || [ "$ROUTER_IP" = "localhost" ] || [ "$ROUTER_I
         msg "   Using local files from $SCRIPT_DIR..." \
             "   Используются локальные файлы из $SCRIPT_DIR..."
         cp "$SCRIPT_DIR/index.html" "$SCRIPT_DIR/qrcode.min.js" /www/awg/
+        [ -f "$SCRIPT_DIR/manifest.json" ] && cp "$SCRIPT_DIR/manifest.json" /www/awg/
         [ -f "$SCRIPT_DIR/assets/favicon.ico" ] && cp "$SCRIPT_DIR/assets/favicon.ico" /www/awg/assets/
         [ -f "$SCRIPT_DIR/favicon.ico" ] && cp "$SCRIPT_DIR/favicon.ico" /www/awg/
     else
@@ -96,6 +97,7 @@ if [ -f /etc/openwrt_release ] || [ "$ROUTER_IP" = "localhost" ] || [ "$ROUTER_I
             "   Загрузка файлов из репозитория ($REPO_RAW_URL)..."
         fetch_file "$REPO_RAW_URL/src/index.html" "/www/awg/index.html"
         fetch_file "$REPO_RAW_URL/src/qrcode.min.js" "/www/awg/qrcode.min.js"
+        fetch_file "$REPO_RAW_URL/src/manifest.json" "/www/awg/manifest.json"
         fetch_file "$REPO_RAW_URL/src/assets/favicon.ico" "/www/awg/assets/favicon.ico"
     fi
     [ -f /www/awg/assets/favicon.ico ] && cp /www/awg/assets/favicon.ico /www/awg/favicon.ico
@@ -152,27 +154,30 @@ ssh -o StrictHostKeyChecking=no "root@${ROUTER_IP}" "mkdir -p /www/awg /www/awg/
 TEMP_DIR=""
 SRC_INDEX="$SCRIPT_DIR/index.html"
 SRC_QR="$SCRIPT_DIR/qrcode.min.js"
+SRC_MAN="$SCRIPT_DIR/manifest.json"
 SRC_FAV="$SCRIPT_DIR/assets/favicon.ico"
 SRC_API="$SCRIPT_DIR/awg-api"
 
-if [ ! -f "$SRC_INDEX" ] || [ ! -f "$SRC_QR" ] || [ ! -f "$SRC_API" ]; then
+if [ ! -f "$SRC_INDEX" ] || [ ! -f "$SRC_QR" ] || [ ! -f "$SRC_API" ] || [ ! -f "$SRC_MAN" ]; then
     msg "3. Local files missing, downloading from GitHub repo..." \
         "3. Локальные файлы не найдены, загрузка из репозитория GitHub..."
     TEMP_DIR="$(mktemp -d 2>/dev/null || mktemp -d -t 'awgit')"
     SRC_INDEX="$TEMP_DIR/index.html"
     SRC_QR="$TEMP_DIR/qrcode.min.js"
+    SRC_MAN="$TEMP_DIR/manifest.json"
     SRC_FAV="$TEMP_DIR/favicon.ico"
     SRC_API="$TEMP_DIR/awg-api"
 
     fetch_file "$REPO_RAW_URL/src/index.html" "$SRC_INDEX"
     fetch_file "$REPO_RAW_URL/src/qrcode.min.js" "$SRC_QR"
+    fetch_file "$REPO_RAW_URL/src/manifest.json" "$SRC_MAN"
     fetch_file "$REPO_RAW_URL/src/assets/favicon.ico" "$SRC_FAV"
     fetch_file "$REPO_RAW_URL/src/awg-api" "$SRC_API"
 fi
 
 msg "4. Uploading web interface and assets (Frontend)..." \
     "4. Загрузка веб-интерфейса и ассетов (Frontend)..."
-scp -O -o StrictHostKeyChecking=no "$SRC_INDEX" "$SRC_QR" "root@${ROUTER_IP}:/www/awg/"
+scp -O -o StrictHostKeyChecking=no "$SRC_INDEX" "$SRC_QR" "$SRC_MAN" "root@${ROUTER_IP}:/www/awg/"
 if [ -f "$SRC_FAV" ]; then
     scp -O -o StrictHostKeyChecking=no "$SRC_FAV" "root@${ROUTER_IP}:/www/awg/assets/favicon.ico"
     scp -O -o StrictHostKeyChecking=no "$SRC_FAV" "root@${ROUTER_IP}:/www/awg/favicon.ico"

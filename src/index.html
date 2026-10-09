@@ -6,6 +6,10 @@
   <title>AwgIt • AmneziaWG Manager</title>
   <link rel="icon" type="image/x-icon" href="/awg/assets/favicon.ico">
   <link rel="shortcut icon" href="/awg/favicon.ico">
+  <link rel="manifest" href="/awg/manifest.json">
+  <meta name="theme-color" content="#161618">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <style>
     :root {
       --bg-body: #161618;
@@ -32,13 +36,14 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background: var(--bg-body); color: var(--text); min-height: 100vh; padding: 24px 16px; display: flex; justify-content: center; transition: background 0.2s, color 0.2s; }
-    .container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 20px; }
+    .container { width: 100%; max-width: 900px; display: flex; flex-direction: column; gap: 16px; }
 
     /* Brand */
-    .brand-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .brand-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
     .brand { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 700; flex-shrink: 0; }
     .brand svg { fill: var(--red); width: 28px; height: 28px; flex-shrink: 0; }
-    .brand-right { display: flex; align-items: center; gap: 10px; }
+    .brand-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .brand-right-actions { display: inline-flex; align-items: center; gap: 8px; }
     .server-badge { background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 4px 12px; border-radius: 20px; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; white-space: nowrap; }
     [data-theme="light"] .server-badge { background: rgba(0,0,0,0.04); }
     .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
@@ -49,6 +54,62 @@
     .lang-btn:hover { color: var(--text); }
     .lang-btn.active { background: var(--btn); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
     [data-theme="light"] .lang-btn.active { background: #ffffff; color: #18181b; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+    /* Navigation Tabs */
+    .nav-tabs { display: flex; gap: 4px; background: rgba(128,128,128,0.1); padding: 3px; border-radius: 10px; border: 1px solid var(--border); }
+    .tab-btn { background: transparent; border: none; color: var(--muted); padding: 6px 14px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { background: var(--btn); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    [data-theme="light"] .tab-btn.active { background: #ffffff; color: #18181b; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+    /* Overview Metrics Bar */
+    .metrics-bar { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 16px; }
+    .metric-card { background: rgba(128,128,128,0.04); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; gap: 2px; }
+    .metric-label { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 5px; }
+    .metric-val { font-size: 16px; font-weight: 700; color: var(--text); }
+
+    /* Controls: Search, Filter, Sort */
+    .controls-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; align-items: center; justify-content: space-between; }
+    .search-box { position: relative; flex: 1; min-width: 180px; }
+    .search-input { width: 100%; background: var(--bg-body); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px 8px 32px; color: var(--text); font-size: 13px; outline: none; transition: border-color 0.15s; }
+    .search-input:focus { border-color: var(--blue); }
+    .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; }
+    .filter-group { display: flex; gap: 4px; flex-wrap: wrap; }
+    .filter-pill { background: rgba(128,128,128,0.06); border: 1px solid var(--border); border-radius: 16px; padding: 4px 10px; font-size: 12px; font-weight: 500; color: var(--muted); cursor: pointer; transition: all 0.15s; }
+    .filter-pill:hover { color: var(--text); }
+    .filter-pill.active { background: var(--btn); color: var(--text); border-color: var(--muted); }
+    [data-theme="light"] .filter-pill.active { background: #e4e4e7; color: #18181b; }
+    .sort-select { background: var(--bg-body); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; color: var(--text); font-size: 12px; outline: none; cursor: pointer; }
+
+    /* Categories / Accordions */
+    .category-group { margin-bottom: 10px; border: 1px solid var(--border); border-radius: 10px; background: rgba(128,128,128,0.02); overflow: hidden; }
+    .category-header { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; background: rgba(128,128,128,0.05); cursor: pointer; user-select: none; transition: background 0.15s; }
+    .category-header:hover { background: rgba(128,128,128,0.09); }
+    .category-left { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; }
+    .category-badge { font-size: 11px; font-weight: 500; color: var(--muted); background: rgba(128,128,128,0.12); padding: 2px 8px; border-radius: 12px; }
+    .category-chevron { color: var(--muted); transition: transform 0.2s; font-size: 12px; }
+    .category-group.collapsed .category-chevron { transform: rotate(-90deg); }
+    .category-body { padding: 8px; display: flex; flex-direction: column; gap: 8px; }
+    .category-group.collapsed .category-body { display: none; }
+
+    /* Badges */
+    .client-note { font-size: 11px; color: #a1a1aa; background: rgba(255,255,255,0.06); padding: 1px 6px; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    [data-theme="light"] .client-note { background: rgba(0,0,0,0.05); color: #52525b; }
+    .client-date { font-size: 10px; color: var(--muted); }
+
+    /* Settings Tab */
+    .settings-grid { display: flex; flex-direction: column; gap: 16px; }
+    .settings-card { background: rgba(128,128,128,0.03); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    .settings-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+    .settings-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+    .settings-label { font-size: 13px; color: var(--text); }
+    .settings-desc { font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .cat-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: rgba(128,128,128,0.05); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 6px; }
+
+    /* Emoji Picker */
+    .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; max-height: 130px; overflow-y: auto; padding: 6px; background: var(--bg-body); border: 1px solid var(--border); border-radius: 8px; margin-top: 6px; }
+    .emoji-cell { font-size: 20px; text-align: center; cursor: pointer; padding: 4px; border-radius: 6px; transition: background 0.15s; user-select: none; }
+    .emoji-cell:hover, .emoji-cell.selected { background: rgba(128,128,128,0.2); }
 
     /* Panel */
     .panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
@@ -174,9 +235,99 @@
       .btn-text { display: none; }
       .panel-actions .btn { padding: 8px 10px; }
 
-      .brand-bar { flex-wrap: wrap; gap: 10px; }
       .server-badge .server-ep { display: none; }
       .server-badge .server-sep-ep { display: none; }
+    }
+
+    /* Mobile Layout Optimization for Header and Search/Filter Controls */
+    @media (max-width: 680px) {
+      .brand-bar {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 10px 8px;
+      }
+      /* Tier 1: Centered Brand Title */
+      .brand {
+        grid-column: 1 / -1;
+        grid-row: 1;
+        justify-content: center;
+        text-align: center;
+        font-size: 20px;
+      }
+      /* Tier 2: Server badge on left, action controls on right */
+      .brand-right {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+        gap: 8px;
+        flex-wrap: nowrap;
+      }
+      .brand-right .server-badge {
+        margin-right: auto;
+        flex-shrink: 0;
+      }
+      .brand-right-actions {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+      /* Tier 3: Full-width Clients / Settings tabs */
+      .nav-tabs {
+        grid-column: 1 / -1;
+        grid-row: 3;
+        width: 100%;
+        display: flex;
+        box-sizing: border-box;
+      }
+      .nav-tabs .tab-btn {
+        flex: 1;
+        justify-content: center;
+      }
+
+      .controls-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+      }
+      .search-box {
+        grid-column: 1;
+        grid-row: 1;
+        min-width: 0;
+      }
+      .sort-select {
+        grid-column: 2;
+        grid-row: 1;
+        max-width: 140px;
+      }
+      .filter-group {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 4px;
+        width: 100%;
+      }
+      .filter-pill {
+        text-align: center;
+        padding: 6px 1px;
+        font-size: clamp(0.64rem, 2.4vw, 0.75rem);
+        letter-spacing: -0.02em;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 720px) {
 
       .client-card {
         display: grid;
@@ -231,51 +382,216 @@
       <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 2.18l7 3.12v4.7c0 4.54-3.14 8.78-7 9.88-3.86-1.1-7-5.34-7-9.88V6.3l7-3.12z"/></svg>
       <span>AmneziaWG</span>
     </div>
+
+    <!-- Navigation Tabs -->
+    <div class="nav-tabs" role="tablist">
+      <button class="tab-btn active" id="tabBtnClients" onclick="switchTab('clients')">
+        <span>👥</span><span id="tabLabelClients">Clients</span>
+      </button>
+      <button class="tab-btn" id="tabBtnSettings" onclick="switchTab('settings')">
+        <span>⚙️</span><span id="tabLabelSettings">Settings</span>
+      </button>
+    </div>
+
     <div class="brand-right">
       <div class="server-badge">
         <span class="dot"></span>
         <span id="serverInfo">...</span>
       </div>
-      <div class="lang-switch" role="group" aria-label="Language">
-        <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
-        <button class="lang-btn" data-lang="ru" onclick="setLang('ru')">RU</button>
+      <div class="brand-right-actions">
+        <div class="lang-switch" role="group" aria-label="Language">
+          <button class="lang-btn" data-lang="en" onclick="setLang('en')">EN</button>
+          <button class="lang-btn" data-lang="ru" onclick="setLang('ru')">RU</button>
+        </div>
+        <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
+          <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
+        </button>
+        <button class="btn-icon" id="btnLogout" onclick="doLogout()" style="display:none" title="Logout">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </button>
       </div>
-      <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">
-        <svg id="themeIcon" width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.389 5.389 0 0 1-4.4 2.26 5.403 5.403 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg>
-      </button>
     </div>
   </div>
 
-  <!-- Panel -->
-  <div class="panel">
-    <div class="panel-header">
-      <span class="panel-title" id="panelTitle">Clients</span>
-      <div class="panel-actions">
-        <button class="btn" id="btnRestore" onclick="doRestore()" title="Restore">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-          <span class="btn-text" id="btnRestoreLabel">Restore</span>
-        </button>
-        <button class="btn" id="btnBackup" onclick="doBackup()" title="Backup">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          <span class="btn-text" id="btnBackupLabel">Backup</span>
-        </button>
-        <button class="btn" id="btnRefresh" onclick="fetchClients()" title="Refresh">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
-          <span class="btn-text" id="btnRefreshLabel">Refresh</span>
-        </button>
-        <button class="btn btn-add" id="btnAddClient" onclick="openCreateModal()" title="New">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        </button>
+  <!-- ===== VIEW: CLIENTS ===== -->
+  <div id="viewClients">
+    <!-- Overview Metrics Bar -->
+    <div class="metrics-bar" id="metricsBar">
+      <div class="metric-card">
+        <span class="metric-label" id="metricRxLabel">↓ Total RX</span>
+        <span class="metric-val" id="metricRxVal">0 B</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label" id="metricTxLabel">↑ Total TX</span>
+        <span class="metric-val" id="metricTxVal">0 B</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label" id="metricOnlineLabel"><span class="dot" style="width:6px;height:6px"></span> Online</span>
+        <span class="metric-val" id="metricOnlineVal">0 / 0</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-label" id="metricTotalLabel">👥 Total Peers</span>
+        <span class="metric-val" id="metricTotalVal">0</span>
       </div>
     </div>
-    <div class="clients-list" id="clientsList">
-      <div class="empty">...</div>
+
+    <!-- Controls Row: Search, Filters, Sort -->
+    <div class="controls-row">
+      <div class="search-box">
+        <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="searchInput" class="search-input" placeholder="Search by name, IP, note..." oninput="onSearchInput()">
+      </div>
+      <div class="filter-group">
+        <button class="filter-pill active" id="filterPillAll" data-filter="all" onclick="setFilter('all')">All</button>
+        <button class="filter-pill" id="filterPillOnline" data-filter="online" onclick="setFilter('online')">🟢 Online</button>
+        <button class="filter-pill" id="filterPillOffline" data-filter="offline" onclick="setFilter('offline')">⚪ Offline</button>
+        <button class="filter-pill" id="filterPillDisabled" data-filter="disabled" onclick="setFilter('disabled')">⛔ Disabled</button>
+      </div>
+      <select id="sortSelect" class="sort-select" onchange="onSortChange()">
+        <option value="name_asc" id="sortOptNameAsc">Name (A-Z)</option>
+        <option value="name_desc" id="sortOptNameDesc">Name (Z-A)</option>
+        <option value="traffic_desc" id="sortOptTraffic">Traffic (Highest)</option>
+        <option value="handshake_desc" id="sortOptHandshake">Latest Active</option>
+        <option value="created_desc" id="sortOptCreated">Date Added</option>
+      </select>
+    </div>
+
+    <!-- Panel -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title" id="panelTitle">Clients</span>
+        <div class="panel-actions">
+          <button class="btn" id="btnRestore" onclick="doRestore()" title="Restore">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            <span class="btn-text" id="btnRestoreLabel">Restore</span>
+          </button>
+          <button class="btn" id="btnBackup" onclick="doBackup()" title="Backup">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span class="btn-text" id="btnBackupLabel">Backup</span>
+          </button>
+          <button class="btn" id="btnRefresh" onclick="fetchClients()" title="Refresh">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+            <span class="btn-text" id="btnRefreshLabel">Refresh</span>
+          </button>
+          <button class="btn btn-add" id="btnAddClient" onclick="openCreateModal()" title="New">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="clients-list" id="clientsList">
+        <div class="empty">...</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== VIEW: SETTINGS ===== -->
+  <div id="viewSettings" style="display:none">
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title" id="settingsTitle">Settings</span>
+      </div>
+      <div class="settings-grid">
+        <!-- Categories Management -->
+        <div class="settings-card">
+          <div class="settings-title">
+            <span>📁</span> <span id="setSecCategories">Client Categories</span>
+          </div>
+          <div class="settings-desc" id="setSecCategoriesDesc">Organize peers into collapsible groups with custom emojis.</div>
+          <div id="settingsCatList" style="margin-top:12px;"></div>
+          <button class="btn btn-primary" id="btnAddCategory" onclick="openCategoryModal()" style="margin-top:10px;">
+            + <span id="btnAddCategoryLabel">Add Category</span>
+          </button>
+        </div>
+
+        <!-- Security / Password -->
+        <div class="settings-card">
+          <div class="settings-title">
+            <span>🔐</span> <span id="setSecSecurity">Admin Security</span>
+          </div>
+          <div class="settings-desc" id="setSecSecurityDesc">Protect control panel with a master password from VPN clients.</div>
+          <div style="margin-top:14px; display:flex; flex-direction:column; gap:10px; max-width:320px;">
+            <div id="rowOldPassword" style="display:none;">
+              <label class="input-label" id="lblOldPassword" style="margin-bottom:4px; font-size:12px;">Current Password</label>
+              <input type="password" id="inputOldPassword" class="input-text" placeholder="Current password">
+            </div>
+            <div>
+              <label class="input-label" id="lblNewPassword" style="margin-bottom:4px; font-size:12px;">New Password</label>
+              <input type="password" id="inputNewPassword" class="input-text" placeholder="New password">
+            </div>
+            <div>
+              <label class="input-label" id="lblConfirmPassword" style="margin-bottom:4px; font-size:12px;">Confirm Password</label>
+              <input type="password" id="inputConfirmPassword" class="input-text" placeholder="Confirm new password" onkeydown="if(event.key==='Enter')saveAdminPassword()">
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:4px;">
+              <button class="btn btn-primary" id="btnSavePassword" onclick="saveAdminPassword()">Save Password</button>
+              <button class="btn" id="btnRemovePassword" onclick="removeAdminPassword()" style="color:#ff6b6b; display:none;">Remove Password</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preferences -->
+        <div class="settings-card">
+          <div class="settings-title">
+            <span>⚡</span> <span id="setSecPrefs">Interface Preferences</span>
+          </div>
+          <div class="settings-row">
+            <div>
+              <div class="settings-label" id="setLblInterval">Polling Interval</div>
+              <div class="settings-desc" id="setDescInterval">Frequency of background telemetry updates.</div>
+            </div>
+            <select id="selectInterval" class="sort-select" onchange="changeInterval(this.value)">
+              <option value="3000">3 s</option>
+              <option value="5000">5 s</option>
+              <option value="10000">10 s</option>
+              <option value="0" id="optIntervalPause">Pause</option>
+            </select>
+          </div>
+          <div class="settings-row" style="margin-top:10px;">
+            <div>
+              <div class="settings-label" id="setLblAccordion">Default Group View</div>
+              <div class="settings-desc" id="setDescAccordion">Initial view of category groups.</div>
+            </div>
+            <select id="selectAccordionDefault" class="sort-select" onchange="changeAccordionDefault(this.value)">
+              <option value="expanded" id="optAccExpanded">All Expanded</option>
+              <option value="collapsed" id="optAccCollapsed">All Collapsed</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Export All Clients -->
+        <div class="settings-card">
+          <div class="settings-title">
+            <span>📥</span> <span id="setSecExport">Export All Clients</span>
+          </div>
+          <div class="settings-desc" id="setSecExportDesc">Download all client configurations as .conf files.</div>
+          <button class="btn" id="btnExportAll" onclick="exportAllClients()" style="margin-top:12px;">
+            📥 <span id="btnExportAllLabel">Download All .conf</span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
 </div>
 
 <!-- ===== MODALS ===== -->
+
+<!-- Auth / Login Modal -->
+<div class="modal-backdrop" id="authModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="authModalTitle">🔐 Admin Authentication</span>
+    </div>
+    <p class="settings-desc" id="authModalDesc" style="margin-bottom:14px;">Please enter administrator password to access AwgIt.</p>
+    <div class="input-group">
+      <label class="input-label" id="authModalPassLabel">Password</label>
+      <input type="password" id="authInputPassword" class="input-text" placeholder="Admin password" onkeydown="if(event.key==='Enter')submitAuth()">
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-primary" id="btnAuthSubmit" onclick="submitAuth()">Unlock</button>
+    </div>
+  </div>
+</div>
 
 <!-- Create Modal -->
 <div class="modal-backdrop" id="createModal">
@@ -286,7 +602,15 @@
     </div>
     <div class="input-group">
       <label class="input-label" id="modalCreateNameLabel">Client Name</label>
-      <input type="text" id="createName" class="input-text" placeholder="e.g. Phone, Laptop">
+      <input type="text" id="createName" class="input-text" placeholder="e.g. Phone, Laptop" onkeydown="if(event.key==='Enter')submitCreate()">
+    </div>
+    <div class="input-group">
+      <label class="input-label" id="modalCreateGroupLabel">Category / Group</label>
+      <select id="createGroup" class="input-text" style="cursor:pointer;"></select>
+    </div>
+    <div class="input-group">
+      <label class="input-label" id="modalCreateNotesLabel">Note / Memo</label>
+      <input type="text" id="createNotes" class="input-text" placeholder="e.g. Son's iPad, Guest" onkeydown="if(event.key==='Enter')submitCreate()">
     </div>
     <div class="modal-footer">
       <button class="btn" id="modalCreateCancel" onclick="closeModal('createModal')">Cancel</button>
@@ -304,16 +628,51 @@
     </div>
     <div class="input-group">
       <label class="input-label" id="modalEditNameLabel">Client Name</label>
-      <input type="text" id="editName" class="input-text" placeholder="Name">
+      <input type="text" id="editName" class="input-text" placeholder="Name" onkeydown="if(event.key==='Enter')submitEdit()">
     </div>
     <div class="input-group">
       <label class="input-label" id="modalEditIpLabel">IP Address (allowed_ips)</label>
-      <input type="text" id="editIp" class="input-text" placeholder="10.9.0.2/32">
+      <input type="text" id="editIp" class="input-text" placeholder="10.9.0.2/32" onkeydown="if(event.key==='Enter')submitEdit()">
+    </div>
+    <div class="input-group">
+      <label class="input-label" id="modalEditGroupLabel">Category / Group</label>
+      <select id="editGroup" class="input-text" style="cursor:pointer;"></select>
+    </div>
+    <div class="input-group">
+      <label class="input-label" id="modalEditNotesLabel">Note / Memo</label>
+      <input type="text" id="editNotes" class="input-text" placeholder="Note" onkeydown="if(event.key==='Enter')submitEdit()">
     </div>
     <input type="hidden" id="editPubKey">
     <div class="modal-footer">
       <button class="btn" id="modalEditCancel" onclick="closeModal('editModal')">Cancel</button>
       <button class="btn btn-primary" id="btnEdit" onclick="submitEdit()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Category Modal -->
+<div class="modal-backdrop" id="categoryModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="categoryModalTitle">Add Category</span>
+      <button class="btn-icon" onclick="closeModal('categoryModal')">✕</button>
+    </div>
+    <div class="input-group">
+      <label class="input-label" id="categoryModalNameLabel">Category Name</label>
+      <input type="text" id="catInputName" class="input-text" placeholder="e.g. Family, Servers">
+    </div>
+    <div class="input-group">
+      <label class="input-label" id="categoryModalEmojiLabel">Emoji Icon</label>
+      <div style="display:flex; gap:8px;">
+        <input type="text" id="catInputIcon" class="input-text" style="width:64px; text-align:center; font-size:20px;" value="📁">
+        <span class="settings-desc" style="align-self:center;" id="categoryModalEmojiHelp">Pick below or type any emoji</span>
+      </div>
+      <div class="emoji-grid" id="emojiGrid"></div>
+    </div>
+    <input type="hidden" id="catEditIndex" value="-1">
+    <div class="modal-footer">
+      <button class="btn" id="categoryModalCancel" onclick="closeModal('categoryModal')">Cancel</button>
+      <button class="btn btn-primary" id="btnCategorySubmit" onclick="submitCategory()">Save</button>
     </div>
   </div>
 </div>
@@ -327,8 +686,9 @@
     </div>
     <div class="qr-box" id="qrBox"></div>
     <div class="conf-preview" id="confPreview"></div>
-    <div class="modal-footer">
+    <div class="modal-footer" style="flex-wrap:wrap; gap:8px;">
       <button class="btn" id="btnCopyConf" onclick="copyConf()">Copy</button>
+      <button class="btn" id="btnPassportInModal" onclick="exportCurrentPassport()">📄 Passport (.html)</button>
       <button class="btn btn-primary" id="btnDownload">Download .conf</button>
     </div>
   </div>
@@ -360,6 +720,8 @@ const API = '/cgi-bin/awg-api';
 let confText = '';
 let confName = 'client';
 let prevStats = {};
+let clientHistory = {};
+const MAX_HISTORY = 12;
 
 // ---- Theme ----
 function toggleTheme() {
@@ -390,7 +752,7 @@ const I18N = {
     restore: 'Restore',
     backup: 'Backup',
     refresh: 'Refresh',
-    tooltipNew: 'New',
+    tooltipNew: 'New Client',
     activity: 'Activity',
     toggleTheme: 'Toggle theme',
     emptyList: 'No clients yet. Click <b>+</b> to add one.',
@@ -408,9 +770,13 @@ const I18N = {
     tooltipDownload: 'Download .conf',
     tooltipEdit: 'Edit',
     tooltipDelete: 'Delete',
+    tooltipPassport: 'Export Passport (.html)',
     modalCreateTitle: 'New AmneziaWG Client',
     modalCreateNameLabel: 'Client Name',
     modalCreateNamePlaceholder: 'e.g. Phone, Laptop',
+    modalCreateGroupLabel: 'Category / Group',
+    modalCreateNotesLabel: 'Note / Memo',
+    modalCreateNotesPlaceholder: "e.g. Son's iPad, Guest",
     cancel: 'Cancel',
     create: 'Create',
     creating: 'Creating...',
@@ -419,6 +785,9 @@ const I18N = {
     modalEditNameLabel: 'Client Name',
     modalEditNamePlaceholder: 'Name',
     modalEditIpLabel: 'IP Address (allowed_ips)',
+    modalEditGroupLabel: 'Category / Group',
+    modalEditNotesLabel: 'Note / Memo',
+    modalEditNotesPlaceholder: 'Note',
     save: 'Save',
     saving: 'Saving...',
     qrClientPrefix: 'Client: ',
@@ -438,6 +807,85 @@ const I18N = {
     restoreConfirm: (file) => `Restore clients from "${file}"? Existing clients will not be affected.`,
     restoreSuccess: (count) => `Restored clients: ${count}`,
     restoreFailed: 'Restore error: ',
+    tabClients: 'Clients',
+    tabSettings: 'Settings',
+    metricRx: '↓ Total RX',
+    metricTx: '↑ Total TX',
+    metricOnline: 'Online',
+    metricTotal: 'Total Peers',
+    searchPlaceholder: 'Search by name, IP, note...',
+    filterAll: 'All',
+    filterOnline: '🟢 Online',
+    filterOffline: '⚪ Offline',
+    filterDisabled: '⛔ Disabled',
+    sortNameAsc: 'Name (A-Z)',
+    sortNameDesc: 'Name (Z-A)',
+    sortTraffic: 'Traffic (Highest)',
+    sortHandshake: 'Latest Active',
+    sortCreated: 'Date Added',
+    uncategorized: 'Uncategorized',
+    peersCount: (total, online) => `${total} peers • ${online} online`,
+    passportBtn: '📄 Passport (.html)',
+    settingsTitle: 'Settings',
+    setSecCategories: 'Client Categories',
+    setSecCategoriesDesc: 'Organize peers into collapsible groups with custom emojis.',
+    btnAddCategoryLabel: 'Add Category',
+    setSecSecurity: 'Admin Security',
+    setSecSecurityDesc: 'Protect control panel with a master password from VPN clients.',
+    lblOldPassword: 'Current Password',
+    inputOldPasswordPlaceholder: 'Current password',
+    lblNewPassword: 'New Password',
+    inputNewPasswordPlaceholder: 'New password',
+    lblConfirmPassword: 'Confirm Password',
+    inputConfirmPasswordPlaceholder: 'Confirm new password',
+    btnSavePassword: 'Save Password',
+    btnRemovePassword: 'Remove Password',
+    passwordSavedAlert: 'Password updated!',
+    passwordRemovedAlert: 'Password removed!',
+    passwordsMismatchAlert: 'Passwords do not match! Please check your input.',
+    enterOldPasswordAlert: 'Please enter current password to set a new one.',
+    removePasswordConfirm: 'Are you sure you want to remove the admin password? The control panel will be unprotected on your local network.',
+    setSecPrefs: 'Interface Preferences',
+    setLblInterval: 'Polling Interval',
+    setDescInterval: 'Frequency of background telemetry updates.',
+    optIntervalPause: 'Pause',
+    setLblAccordion: 'Default Group View',
+    setDescAccordion: 'Initial view of category groups.',
+    optAccExpanded: 'All Expanded',
+    optAccCollapsed: 'All Collapsed',
+    setSecExport: 'Export All Clients',
+    setSecExportDesc: 'Download all client configurations as .conf files.',
+    btnExportAllLabel: 'Download All .conf',
+    authModalTitle: '🔐 Admin Authentication',
+    authModalDesc: 'Please enter administrator password to access AwgIt.',
+    authModalPassLabel: 'Password',
+    btnAuthSubmit: 'Unlock',
+    authFailedAlert: 'Invalid password!',
+    categoryModalTitle: 'Add Category',
+    categoryModalTitleEdit: 'Edit Category',
+    categoryModalNameLabel: 'Category Name',
+    categoryModalEmojiLabel: 'Emoji Icon',
+    categoryModalEmojiHelp: 'Pick below or type any emoji',
+    deleteCategoryConfirm: (name) => `Delete category "${name}"? Peers will be moved to Uncategorized.`,
+    passportTitle: 'AmneziaWG Client Passport',
+    passportDownloadBtn: 'Download .conf',
+    passportStep1: '1. Install AmneziaWG app',
+    passportStep2: '2. Import configuration or scan QR code',
+    passportStep3: '3. Activate connection',
+    passportStep1Desc: 'Install AmneziaWG app on your device (iOS, Android, Windows, macOS, Linux).',
+    passportStep2Desc: 'Scan the QR code with AmneziaWG app or import the downloaded .conf file.',
+    passportStep3Desc: 'Turn on the VPN tunnel to enjoy secure and unrestricted Internet.',
+    passportInstructions: 'Quick Connection Guide',
+    passportConfigToggle: 'Show Configuration Text',
+    passportCreated: 'Created',
+    enterPasswordAlert: 'Please enter a password',
+    removePasswordConfirm: 'Are you sure you want to remove admin password protection?',
+    exportAllEmpty: 'No clients with available configurations to export.',
+    passportCopyConfig: 'Copy Configuration',
+    passportCopied: 'Configuration copied to clipboard!',
+    noMatchingClients: 'No clients match your filter / search.',
+    categoryExistsAlert: 'Category with this name already exists.',
+    logout: 'Logout',
   },
   ru: {
     panelTitle: 'Клиенты',
@@ -462,9 +910,13 @@ const I18N = {
     tooltipDownload: 'Скачать .conf',
     tooltipEdit: 'Редактировать',
     tooltipDelete: 'Удалить',
+    tooltipPassport: 'Экспорт паспорта (.html)',
     modalCreateTitle: 'Новый клиент AmneziaWG',
     modalCreateNameLabel: 'Имя клиента',
     modalCreateNamePlaceholder: 'напр. Телефон, Ноутбук',
+    modalCreateGroupLabel: 'Категория / Группа',
+    modalCreateNotesLabel: 'Заметка',
+    modalCreateNotesPlaceholder: 'напр. iPad сына, Гость',
     cancel: 'Отмена',
     create: 'Создать',
     creating: 'Создание...',
@@ -473,6 +925,9 @@ const I18N = {
     modalEditNameLabel: 'Имя клиента',
     modalEditNamePlaceholder: 'Имя',
     modalEditIpLabel: 'IP-адрес (allowed_ips)',
+    modalEditGroupLabel: 'Категория / Группа',
+    modalEditNotesLabel: 'Заметка',
+    modalEditNotesPlaceholder: 'Заметка',
     save: 'Сохранить',
     saving: 'Сохранение...',
     qrClientPrefix: 'Клиент: ',
@@ -492,6 +947,85 @@ const I18N = {
     restoreConfirm: (file) => `Восстановить клиентов из файла «${file}»? Существующие клиенты затронуты не будут.`,
     restoreSuccess: (count) => `Восстановлено клиентов: ${count}`,
     restoreFailed: 'Ошибка восстановления: ',
+    tabClients: 'Клиенты',
+    tabSettings: 'Настройки',
+    metricRx: '↓ Всего RX',
+    metricTx: '↑ Всего TX',
+    metricOnline: 'Онлайн',
+    metricTotal: 'Всего пиров',
+    searchPlaceholder: 'Поиск по имени, IP, заметке...',
+    filterAll: 'Все',
+    filterOnline: '🟢 Онлайн',
+    filterOffline: '⚪ Офлайн',
+    filterDisabled: '⛔ Отключённые',
+    sortNameAsc: 'По имени (А-Я)',
+    sortNameDesc: 'По имени (Я-А)',
+    sortTraffic: 'По трафику (↓)',
+    sortHandshake: 'По активности',
+    sortCreated: 'По дате добавления',
+    uncategorized: 'Без категории',
+    peersCount: (total, online) => `Всего: ${total} • Онлайн: ${online}`,
+    passportBtn: '📄 Паспорт (.html)',
+    settingsTitle: 'Настройки',
+    setSecCategories: 'Категории клиентов',
+    setSecCategoriesDesc: 'Группируйте клиентов в сворачиваемые секции с эмодзи.',
+    btnAddCategoryLabel: 'Добавить категорию',
+    setSecSecurity: 'Безопасность панели',
+    setSecSecurityDesc: 'Защита панели мастер-паролем от подключённых через VPN устройств.',
+    lblOldPassword: 'Текущий пароль',
+    inputOldPasswordPlaceholder: 'Текущий пароль',
+    lblNewPassword: 'Новый пароль',
+    inputNewPasswordPlaceholder: 'Новый пароль',
+    lblConfirmPassword: 'Подтверждение пароля',
+    inputConfirmPasswordPlaceholder: 'Повторите новый пароль',
+    btnSavePassword: 'Сохранить пароль',
+    btnRemovePassword: 'Удалить пароль',
+    passwordSavedAlert: 'Пароль сохранён!',
+    passwordRemovedAlert: 'Пароль удалён!',
+    passwordsMismatchAlert: 'Пароли не совпадают! Проверьте правильность ввода.',
+    enterOldPasswordAlert: 'Введите текущий пароль для подтверждения смены.',
+    removePasswordConfirm: 'Вы уверены, что хотите удалить пароль? Доступ к панели в локальной сети станет открытым.',
+    setSecPrefs: 'Параметры интерфейса',
+    setLblInterval: 'Интервал опроса',
+    setDescInterval: 'Частота обновления сетевой статистики.',
+    optIntervalPause: 'Пауза',
+    setLblAccordion: 'Вид категорий по умолчанию',
+    setDescAccordion: 'Начальное состояние групп.',
+    optAccExpanded: 'Все развёрнуты',
+    optAccCollapsed: 'Все свёрнуты',
+    setSecExport: 'Экспорт всех клиентов',
+    setSecExportDesc: 'Скачать конфигурации всех клиентов файлами .conf.',
+    btnExportAllLabel: 'Скачать все .conf',
+    authModalTitle: '🔐 Авторизация администратора',
+    authModalDesc: 'Введите пароль администратора для доступа к панели AwgIt.',
+    authModalPassLabel: 'Пароль',
+    btnAuthSubmit: 'Войти',
+    authFailedAlert: 'Неверный пароль!',
+    categoryModalTitle: 'Добавить категорию',
+    categoryModalTitleEdit: 'Редактировать категорию',
+    categoryModalNameLabel: 'Название категории',
+    categoryModalEmojiLabel: 'Иконка / Эмодзи',
+    categoryModalEmojiHelp: 'Выберите ниже или введите любой эмодзи',
+    deleteCategoryConfirm: (name) => `Удалить категорию «${name}»? Клиенты будут перенесены в «Без категории».`,
+    passportTitle: 'Паспорт клиента AmneziaWG',
+    passportDownloadBtn: 'Скачать .conf',
+    passportStep1: '1. Установите приложение AmneziaWG',
+    passportStep2: '2. Импортируйте конфиг или отсканируйте QR-код',
+    passportStep3: '3. Активируйте подключение',
+    passportStep1Desc: 'Установите приложение AmneziaWG (iOS, Android, Windows, macOS, Linux).',
+    passportStep2Desc: 'Отсканируйте QR-код в приложении или импортируйте скачанный .conf файл.',
+    passportStep3Desc: 'Включите VPN-туннель для безопасного защищённого доступа в интернет.',
+    passportInstructions: 'Инструкция по подключению',
+    passportConfigToggle: 'Показать текст конфигурации',
+    passportCreated: 'Создан',
+    enterPasswordAlert: 'Пожалуйста, введите пароль',
+    removePasswordConfirm: 'Вы уверены, что хотите снять защиту панели паролем?',
+    exportAllEmpty: 'Нет клиентов с доступной конфигурацией для экспорта.',
+    passportCopyConfig: 'Копировать конфигурацию',
+    passportCopied: 'Конфигурация скопирована в буфер обмена!',
+    noMatchingClients: 'Нет клиентов, соответствующих фильтрам / поиску.',
+    categoryExistsAlert: 'Категория с таким именем уже существует.',
+    logout: 'Выйти',
   }
 };
 
@@ -516,6 +1050,16 @@ function getInitialLang() {
 let currentLang = 'en';
 let lastClientsData = null;
 let currentDeleteName = '';
+let authPassword = localStorage.getItem('awgit_password') || '';
+let authRequired = false;
+let serverCategories = [];
+let collapsedCategories = JSON.parse(localStorage.getItem('awgit_collapsed') || '{}');
+let currentFilter = 'all';
+let currentSearch = '';
+let currentSort = localStorage.getItem('awgit_sort') || 'name_asc';
+let pollIntervalMs = parseInt(localStorage.getItem('awgit_interval') || '3000', 10);
+let accordionDefault = localStorage.getItem('awgit_accordion_default') || 'expanded';
+let activeTab = 'clients';
 
 function setLang(lang) {
   if (lang !== 'ru' && lang !== 'en') lang = 'en';
@@ -529,84 +1073,121 @@ function setLang(lang) {
 
   const t = I18N[lang];
 
-  const panelTitle = document.getElementById('panelTitle');
-  if (panelTitle) panelTitle.textContent = t.panelTitle;
+  const setText = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  const setAttr = (id, attr, val) => { const el = document.getElementById(id); if (el) el.setAttribute(attr, val); };
 
-  const btnRestore = document.getElementById('btnRestoreLabel');
-  if (btnRestore) btnRestore.textContent = t.restore;
+  setText('tabLabelClients', t.tabClients);
+  setText('tabLabelSettings', t.tabSettings);
+  setText('metricRxLabel', t.metricRx);
+  setText('metricTxLabel', t.metricTx);
+  setText('metricOnlineLabel', t.metricOnline);
+  setText('metricTotalLabel', t.metricTotal);
 
-  const btnBackup = document.getElementById('btnBackupLabel');
-  if (btnBackup) btnBackup.textContent = t.backup;
+  setAttr('searchInput', 'placeholder', t.searchPlaceholder);
+  setText('filterPillAll', t.filterAll);
+  setText('filterPillOnline', t.filterOnline);
+  setText('filterPillOffline', t.filterOffline);
+  setText('filterPillDisabled', t.filterDisabled);
 
-  const btnRefresh = document.getElementById('btnRefreshLabel');
-  if (btnRefresh) btnRefresh.textContent = t.refresh;
+  setText('sortOptNameAsc', t.sortNameAsc);
+  setText('sortOptNameDesc', t.sortNameDesc);
+  setText('sortOptTraffic', t.sortTraffic);
+  setText('sortOptHandshake', t.sortHandshake);
+  setText('sortOptCreated', t.sortCreated);
 
-  const btnAdd = document.getElementById('btnAddClient');
-  if (btnAdd) btnAdd.title = t.tooltipNew;
+  setText('panelTitle', t.panelTitle);
+  setText('btnRestoreLabel', t.restore);
+  setText('btnBackupLabel', t.backup);
+  setText('btnRefreshLabel', t.refresh);
+  setAttr('btnAddClient', 'title', t.tooltipNew);
+  setAttr('themeBtn', 'title', t.toggleTheme);
+  setAttr('btnLogout', 'title', t.logout);
 
-  const themeBtn = document.getElementById('themeBtn');
-  if (themeBtn) themeBtn.title = t.toggleTheme;
+  // Settings
+  setText('settingsTitle', t.settingsTitle);
+  setText('setSecCategories', t.setSecCategories);
+  setText('setSecCategoriesDesc', t.setSecCategoriesDesc);
+  setText('btnAddCategoryLabel', t.btnAddCategoryLabel);
+  setText('setSecSecurity', t.setSecSecurity);
+  setText('setSecSecurityDesc', t.setSecSecurityDesc);
+  setText('lblOldPassword', t.lblOldPassword);
+  setAttr('inputOldPassword', 'placeholder', t.inputOldPasswordPlaceholder);
+  setText('lblNewPassword', t.lblNewPassword);
+  setAttr('inputNewPassword', 'placeholder', t.inputNewPasswordPlaceholder);
+  setText('lblConfirmPassword', t.lblConfirmPassword);
+  setAttr('inputConfirmPassword', 'placeholder', t.inputConfirmPasswordPlaceholder);
+  setText('btnSavePassword', t.btnSavePassword);
+  setText('btnRemovePassword', t.btnRemovePassword);
+  setText('setSecPrefs', t.setSecPrefs);
+  setText('setLblInterval', t.setLblInterval);
+  setText('setDescInterval', t.setDescInterval);
+  setText('optIntervalPause', t.optIntervalPause);
+  setText('setLblAccordion', t.setLblAccordion);
+  setText('setDescAccordion', t.setDescAccordion);
+  setText('optAccExpanded', t.optAccExpanded);
+  setText('optAccCollapsed', t.optAccCollapsed);
+  setText('setSecExport', t.setSecExport);
+  setText('setSecExportDesc', t.setSecExportDesc);
+  setText('btnExportAllLabel', t.btnExportAllLabel);
 
-  const mCreateTitle = document.getElementById('modalCreateTitle');
-  if (mCreateTitle) mCreateTitle.textContent = t.modalCreateTitle;
+  // Modals
+  setText('authModalTitle', t.authModalTitle);
+  setText('authModalDesc', t.authModalDesc);
+  setText('authModalPassLabel', t.authModalPassLabel);
+  setText('btnAuthSubmit', t.btnAuthSubmit);
 
-  const mCreateLabel = document.getElementById('modalCreateNameLabel');
-  if (mCreateLabel) mCreateLabel.textContent = t.modalCreateNameLabel;
-
-  const createInput = document.getElementById('createName');
-  if (createInput) createInput.placeholder = t.modalCreateNamePlaceholder;
-
-  const mCreateCancel = document.getElementById('modalCreateCancel');
-  if (mCreateCancel) mCreateCancel.textContent = t.cancel;
-
+  setText('modalCreateTitle', t.modalCreateTitle);
+  setText('modalCreateNameLabel', t.modalCreateNameLabel);
+  setAttr('createName', 'placeholder', t.modalCreateNamePlaceholder);
+  setText('modalCreateGroupLabel', t.modalCreateGroupLabel);
+  setText('modalCreateNotesLabel', t.modalCreateNotesLabel);
+  setAttr('createNotes', 'placeholder', t.modalCreateNotesPlaceholder);
+  setText('modalCreateCancel', t.cancel);
   const btnCreate = document.getElementById('btnCreate');
   if (btnCreate && !btnCreate.disabled) btnCreate.textContent = t.create;
 
-  const mEditTitle = document.getElementById('modalEditTitle');
-  if (mEditTitle) mEditTitle.textContent = t.modalEditTitle;
-
-  const mEditNameLabel = document.getElementById('modalEditNameLabel');
-  if (mEditNameLabel) mEditNameLabel.textContent = t.modalEditNameLabel;
-
-  const editName = document.getElementById('editName');
-  if (editName) editName.placeholder = t.modalEditNamePlaceholder;
-
-  const mEditIpLabel = document.getElementById('modalEditIpLabel');
-  if (mEditIpLabel) mEditIpLabel.textContent = t.modalEditIpLabel;
-
-  const mEditCancel = document.getElementById('modalEditCancel');
-  if (mEditCancel) mEditCancel.textContent = t.cancel;
-
+  setText('modalEditTitle', t.modalEditTitle);
+  setText('modalEditNameLabel', t.modalEditNameLabel);
+  setAttr('editName', 'placeholder', t.modalEditNamePlaceholder);
+  setText('modalEditIpLabel', t.modalEditIpLabel);
+  setText('modalEditGroupLabel', t.modalEditGroupLabel);
+  setText('modalEditNotesLabel', t.modalEditNotesLabel);
+  setAttr('editNotes', 'placeholder', t.modalEditNotesPlaceholder);
+  setText('modalEditCancel', t.cancel);
   const btnEdit = document.getElementById('btnEdit');
   if (btnEdit && !btnEdit.disabled) btnEdit.textContent = t.save;
 
+  setText('categoryModalTitle', t.categoryModalTitle);
+  setText('categoryModalNameLabel', t.categoryModalNameLabel);
+  setText('categoryModalEmojiLabel', t.categoryModalEmojiLabel);
+  setText('categoryModalEmojiHelp', t.categoryModalEmojiHelp);
+  setText('categoryModalCancel', t.cancel);
+
   const qrTitle = document.getElementById('qrTitle');
   if (qrTitle) qrTitle.textContent = confName ? (t.qrClientPrefix + confName) : t.qrTitle;
+  setText('btnCopyConf', t.copy);
+  setText('btnDownload', t.downloadConf);
+  setText('btnPassportInModal', t.passportBtn);
 
-  const btnCopyConf = document.getElementById('btnCopyConf');
-  if (btnCopyConf) btnCopyConf.textContent = t.copy;
-
-  const btnDownload = document.getElementById('btnDownload');
-  if (btnDownload) btnDownload.textContent = t.downloadConf;
-
-  const mDeleteTitle = document.getElementById('modalDeleteTitle');
-  if (mDeleteTitle) mDeleteTitle.textContent = t.modalDeleteTitle;
-
-  const deleteWarningMsg = document.getElementById('deleteWarningMsg');
-  if (deleteWarningMsg) deleteWarningMsg.textContent = t.deleteWarning;
-
+  setText('modalDeleteTitle', t.modalDeleteTitle);
+  setText('deleteWarningMsg', t.deleteWarning);
   const nameEl = document.getElementById('deleteClientName');
   if (nameEl && currentDeleteName) nameEl.textContent = '«' + currentDeleteName + '»';
-
-  const mDeleteCancel = document.getElementById('modalDeleteCancel');
-  if (mDeleteCancel) mDeleteCancel.textContent = t.cancel;
-
+  setText('modalDeleteCancel', t.cancel);
   const btnDeleteSubmit = document.getElementById('btnDeleteSubmit');
   if (btnDeleteSubmit && !btnDeleteSubmit.disabled) btnDeleteSubmit.textContent = t.delete;
 
   if (lastClientsData) {
     renderPeerList(lastClientsData);
   }
+  if (typeof renderSettingsCategories === 'function') renderSettingsCategories();
+  if (typeof updateCategoryDropdowns === 'function') updateCategoryDropdowns();
+  const selSort = document.getElementById('sortSelect');
+  if (selSort && currentSort) selSort.value = currentSort;
+  const selInt = document.getElementById('selectInterval');
+  if (selInt) selInt.value = String(pollIntervalMs);
+  const selAcc = document.getElementById('selectAccordionDefault');
+  if (selAcc) selAcc.value = accordionDefault;
 }
 
 // ---- Helpers ----
@@ -616,7 +1197,7 @@ function escapeHtml(str) {
   })[m]);
 }
 function escapeJs(str) {
-  return String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  return String(str || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r/g, '').replace(/\n/g, '\\n');
 }
 function fmtBytes(b) {
   if (!b || b == 0) return '0 B';
@@ -641,25 +1222,202 @@ function fmtHandshake(ts) {
   return Math.floor(d/86400) + t.dayAgo;
 }
 
-// ---- Modals ----
+// ---- Modals & Tabs ----
 function openModal(id) { document.getElementById(id).classList.add('show'); }
 function closeModal(id) { document.getElementById(id).classList.remove('show'); }
 
-// ---- Fetch & Render ----
-async function fetchClients() {
-  try {
-    const res = await fetch(`${API}?action=status`);
-    const data = await res.json();
-    lastClientsData = data;
-    renderPeerList(data);
-  } catch(e) {
-    const t = I18N[currentLang];
-    document.getElementById('clientsList').innerHTML = `<div class="empty">${t.netError}${escapeHtml(e.message)}</div>`;
+function switchTab(tab) {
+  activeTab = tab;
+  const btnClients = document.getElementById('tabBtnClients');
+  const btnSettings = document.getElementById('tabBtnSettings');
+  const viewClients = document.getElementById('viewClients');
+  const viewSettings = document.getElementById('viewSettings');
+
+  if (btnClients) btnClients.classList.toggle('active', tab === 'clients');
+  if (btnSettings) btnSettings.classList.toggle('active', tab === 'settings');
+  if (viewClients) viewClients.style.display = tab === 'clients' ? 'block' : 'none';
+  if (viewSettings) viewSettings.style.display = tab === 'settings' ? 'block' : 'none';
+
+  if (tab === 'settings') {
+    renderSettingsCategories();
   }
 }
 
-let clientHistory = {};
-const MAX_HISTORY = 12;
+// ---- API Wrapper & Auth Guard ----
+async function apiFetch(url, options = {}) {
+  let finalUrl = url;
+  if (authPassword) {
+    const sep = finalUrl.includes('?') ? '&' : '?';
+    finalUrl += sep + 'password=' + encodeURIComponent(authPassword);
+  }
+  options.headers = options.headers || {};
+  if (authPassword) {
+    options.headers['X-Awgit-Password'] = authPassword;
+  }
+  const res = await fetch(finalUrl, options);
+  const data = await res.json();
+  if (data && (data.code === 'unauthorized' || (data.status === 'error' && data.auth_required))) {
+    authRequired = true;
+    updateLogoutButton();
+    stopPolling();
+    showAuthModal();
+  }
+  return data;
+}
+
+function showAuthModal() {
+  const modal = document.getElementById('authModal');
+  const isAlreadyOpen = modal && modal.classList.contains('show');
+  openModal('authModal');
+  stopPolling();
+  const input = document.getElementById('authInputPassword');
+  if (input && !isAlreadyOpen) {
+    input.value = '';
+    setTimeout(() => input.focus(), 60);
+  }
+}
+
+async function submitAuth() {
+  const t = I18N[currentLang];
+  const input = document.getElementById('authInputPassword');
+  const val = input ? input.value : '';
+  if (!val) return alert(t.enterPasswordAlert);
+  const btn = document.getElementById('btnAuthSubmit');
+  if (btn) btn.disabled = true;
+  try {
+    const url = `${API}?action=auth_check&password=${encodeURIComponent(val)}`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'X-Awgit-Password': val }
+    });
+    const data = await res.json();
+    if (data.status === 'ok' && data.authenticated) {
+      authPassword = val;
+      localStorage.setItem('awgit_password', authPassword);
+      authRequired = Boolean(data.auth_required);
+      closeModal('authModal');
+      updateLogoutButton();
+      startPolling(pollIntervalMs || 3000);
+      fetchClients();
+    } else {
+      alert(t.authFailedAlert);
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+    }
+  } catch(e) {
+    alert(t.netError + e.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function doLogout() {
+  authPassword = '';
+  localStorage.removeItem('awgit_password');
+  stopPolling();
+  updateLogoutButton();
+  showAuthModal();
+}
+
+function updateSecurityForm() {
+  const rowOld = document.getElementById('rowOldPassword');
+  const btnRemove = document.getElementById('btnRemovePassword');
+  const isSet = Boolean(authRequired || authPassword);
+  if (rowOld) rowOld.style.display = isSet ? 'block' : 'none';
+  if (btnRemove) btnRemove.style.display = isSet ? 'inline-flex' : 'none';
+}
+
+function updateLogoutButton() {
+  const btn = document.getElementById('btnLogout');
+  if (btn) {
+    btn.style.display = (authPassword || authRequired) ? 'inline-flex' : 'none';
+  }
+  updateSecurityForm();
+}
+
+// ---- Controls: Search, Filters, Sort ----
+function onSearchInput() {
+  const input = document.getElementById('searchInput');
+  currentSearch = input ? input.value.trim().toLowerCase() : '';
+  if (lastClientsData) renderPeerList(lastClientsData);
+}
+
+function setFilter(filter) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-pill').forEach(btn => {
+    btn.classList.toggle('active', btn.getAttribute('data-filter') === filter);
+  });
+  if (lastClientsData) renderPeerList(lastClientsData);
+}
+
+function onSortChange() {
+  const select = document.getElementById('sortSelect');
+  if (select) {
+    currentSort = select.value;
+    localStorage.setItem('awgit_sort', currentSort);
+    if (lastClientsData) renderPeerList(lastClientsData);
+  }
+}
+
+function sortPeers(peers) {
+  const sorted = [...peers];
+  switch (currentSort) {
+    case 'name_asc':
+      sorted.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      break;
+    case 'name_desc':
+      sorted.sort((a, b) => (b.name || '').localeCompare(a.name || ''));
+      break;
+    case 'traffic_desc':
+      sorted.sort((a, b) => ((b.transfer_rx + b.transfer_tx) || 0) - ((a.transfer_rx + a.transfer_tx) || 0));
+      break;
+    case 'handshake_desc':
+      sorted.sort((a, b) => (b.latest_handshake || 0) - (a.latest_handshake || 0));
+      break;
+    case 'created_desc':
+      sorted.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+      break;
+  }
+  return sorted;
+}
+
+// ---- Overview Metrics ----
+function updateOverviewMetrics(peers) {
+  let totalRx = 0;
+  let totalTx = 0;
+  let onlineCount = 0;
+  const now = Date.now() / 1000;
+
+  if (peers && peers.length) {
+    peers.forEach(p => {
+      totalRx += (p.transfer_rx || 0);
+      totalTx += (p.transfer_tx || 0);
+      const isOnline = (p.disabled != 1 && p.disabled !== true) && (p.latest_handshake && (now - p.latest_handshake < 180));
+      if (isOnline) onlineCount++;
+    });
+  }
+
+  const elRx = document.getElementById('metricRxVal');
+  const elTx = document.getElementById('metricTxVal');
+  const elOnline = document.getElementById('metricOnlineVal');
+  const elTotal = document.getElementById('metricTotalVal');
+
+  if (elRx) elRx.textContent = fmtBytes(totalRx);
+  if (elTx) elTx.textContent = fmtBytes(totalTx);
+  if (elOnline) elOnline.textContent = `${onlineCount} / ${peers ? peers.length : 0}`;
+  if (elTotal) elTotal.textContent = String(peers ? peers.length : 0);
+}
+
+
+
+function toggleCategory(catKey) {
+  const current = collapsedCategories[catKey] !== undefined ? collapsedCategories[catKey] : (accordionDefault === 'collapsed');
+  collapsedCategories[catKey] = !current;
+  localStorage.setItem('awgit_collapsed', JSON.stringify(collapsedCategories));
+  if (lastClientsData) renderPeerList(lastClientsData);
+}
 
 function renderSparkline(pts, id) {
   const w = 120, h = 26;
@@ -695,6 +1453,70 @@ function renderSparkline(pts, id) {
   </svg>`;
 }
 
+function renderClientCard(p) {
+  const t = I18N[currentLang];
+  const pub = p.public_key;
+  const safeName = escapeHtml(p.name);
+  const jsName = escapeJs(p.name);
+  const safeIp = escapeHtml(p.allowed_ips);
+  const safeGroup = escapeHtml(p.group || '');
+  const jsGroup = escapeJs(p.group || '');
+  const safeNotes = escapeHtml(p.notes || '');
+  const jsNotes = escapeJs(p.notes || '');
+  const chk = (p.disabled == 0 || p.disabled === false) ? 'checked' : '';
+  const online = p.isOnline;
+
+  const noteBadge = safeNotes ? `<span class="client-note" title="${safeNotes}">📝 ${safeNotes}</span>` : '';
+
+  return `<div class="client-card">
+    <div class="avatar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+    <div class="client-meta">
+      <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+        <span class="client-name">${safeName}</span>
+        ${noteBadge}
+      </div>
+      <div class="client-sub">
+        <span>${safeIp}</span>
+        <span>•</span>
+        <span class="status-dot ${online ? 'online' : ''}"></span>
+        <span>${online ? t.online : fmtHandshake(p.latest_handshake)}</span>
+      </div>
+    </div>
+    <div class="client-chart" title="${t.activity}: ${fmtSpeed(p.totalSpeed || 0)}">
+      ${renderSparkline(clientHistory[pub], pub)}
+    </div>
+    <div class="client-speed">
+      <div class="speed-item">
+        <span class="speed-val">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+          ${fmtSpeed(p.rxSpeed || 0)}
+        </span>
+        <span class="speed-bps">${fmtBytes(p.transfer_rx)}</span>
+      </div>
+      <div class="speed-item">
+        <span class="speed-val">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+          ${fmtSpeed(p.txSpeed || 0)}
+        </span>
+        <span class="speed-bps">${fmtBytes(p.transfer_tx)}</span>
+      </div>
+    </div>
+    <div class="client-toggle">
+      <label class="switch" title="${t.tooltipToggle}">
+        <input type="checkbox" ${chk} onchange="doToggle('${pub}', this.checked)">
+        <span class="slider"></span>
+      </label>
+    </div>
+    <div class="action-btns">
+      <button class="btn-icon" title="${t.tooltipQr}" onclick="openQr('${pub}')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="4" height="4"/><line x1="21" y1="14" x2="21" y2="14.01"/><line x1="14" y1="21" x2="14" y2="21.01"/><line x1="21" y1="21" x2="21" y2="21.01"/></svg></button>
+      <button class="btn-icon" title="${t.tooltipPassport}" onclick="exportPassport('${pub}','${jsName}')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></button>
+      <button class="btn-icon download" title="${t.tooltipDownload}" onclick="downloadConf('${pub}','${jsName}')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
+      <button class="btn-icon edit" title="${t.tooltipEdit}" onclick="openEdit('${pub}','${jsName}','${safeIp}','${jsGroup}','${jsNotes}')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+      <button class="btn-icon danger" title="${t.tooltipDelete}" onclick="openDelete('${pub}','${jsName}')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+    </div>
+  </div>`;
+}
+
 function renderPeerList(data) {
   const t = I18N[currentLang];
   if (!data) return;
@@ -708,6 +1530,8 @@ function renderPeerList(data) {
       `<span>${escapeHtml(s.interface)}</span> • <span>:${escapeHtml(s.listen_port)}</span><span class="server-sep-ep"> • </span><span class="server-ep">${escapeHtml(s.endpoint)}</span>`;
   }
 
+  updateOverviewMetrics(data.peers || []);
+
   const list = document.getElementById('clientsList');
   if (!data.peers || data.peers.length === 0) {
     list.innerHTML = `<div class="empty">${t.emptyList}</div>`;
@@ -716,134 +1540,682 @@ function renderPeerList(data) {
   }
 
   const now = Date.now() / 1000;
-  list.innerHTML = data.peers.map(p => {
+  data.peers.forEach(p => {
     const pub = p.public_key;
     const prev = prevStats[pub] || {};
     const elapsed = (prev.ts && now > prev.ts) ? (now - prev.ts) : 3;
-    const rxSpeed = (prev.rx != null && elapsed > 0) ? Math.max(0, (p.transfer_rx - prev.rx) / elapsed) : 0;
-    const txSpeed = (prev.tx != null && elapsed > 0) ? Math.max(0, (p.transfer_tx - prev.tx) / elapsed) : 0;
-    const totalSpeed = rxSpeed + txSpeed;
+    p.rxSpeed = (prev.rx != null && elapsed > 0) ? Math.max(0, (p.transfer_rx - prev.rx) / elapsed) : 0;
+    p.txSpeed = (prev.tx != null && elapsed > 0) ? Math.max(0, (p.transfer_tx - prev.tx) / elapsed) : 0;
+    p.totalSpeed = p.rxSpeed + p.txSpeed;
 
     if (!clientHistory[pub]) {
       clientHistory[pub] = new Array(MAX_HISTORY).fill(0);
     }
     if (prev.ts && now > prev.ts) {
-      clientHistory[pub].push(totalSpeed);
+      clientHistory[pub].push(p.totalSpeed);
       if (clientHistory[pub].length > MAX_HISTORY) {
         clientHistory[pub].shift();
       }
     }
     prevStats[pub] = { rx: p.transfer_rx, tx: p.transfer_tx, ts: now };
+    p.isOnline = (p.disabled != 1 && p.disabled !== true) && (p.latest_handshake && (now - p.latest_handshake < 180));
+  });
 
-    const online = p.online;
-    const chk = (p.disabled == 0 || p.disabled === false) ? 'checked' : '';
-    const safeName = escapeHtml(p.name);
-    const jsName = escapeJs(p.name);
-    const safeIp = escapeHtml(p.allowed_ips);
+  // Filter peers
+  const filtered = data.peers.filter(p => {
+    if (currentSearch) {
+      const q = currentSearch;
+      const matchName = (p.name || '').toLowerCase().includes(q);
+      const matchIp = (p.allowed_ips || '').toLowerCase().includes(q);
+      const matchNotes = (p.notes || '').toLowerCase().includes(q);
+      const matchGroup = (p.group || '').toLowerCase().includes(q);
+      if (!matchName && !matchIp && !matchNotes && !matchGroup) return false;
+    }
+    if (currentFilter === 'online') {
+      if (!p.isOnline) return false;
+    } else if (currentFilter === 'offline') {
+      if (p.isOnline || (p.disabled == 1 || p.disabled === true)) return false;
+    } else if (currentFilter === 'disabled') {
+      if (p.disabled != 1 && p.disabled !== true) return false;
+    }
+    return true;
+  });
 
-    return `<div class="client-card">
-      <div class="avatar"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
-      <div class="client-meta">
-        <div class="client-name">${safeName}</div>
-        <div class="client-sub">
-          <span>${safeIp}</span>
-          <span>•</span>
-          <span class="status-dot ${online?'online':''}"></span>
-          <span>${online ? t.online : fmtHandshake(p.latest_handshake)}</span>
+  if (filtered.length === 0) {
+    list.innerHTML = `<div class="empty">${t.noMatchingClients}</div>`;
+    return;
+  }
+
+  // Categories list
+  const catDefs = [...serverCategories];
+  data.peers.forEach(p => {
+    if (p.group && !catDefs.some(c => c.name === p.group)) {
+      catDefs.push({ name: p.group, icon: '📁' });
+    }
+  });
+  catDefs.push({ name: '', icon: '📁', isUncategorized: true });
+
+  const catHtmlParts = [];
+  catDefs.forEach(cat => {
+    const isUncat = Boolean(cat.isUncategorized);
+    const catName = cat.name;
+    const catKey = isUncat ? '__uncategorized__' : catName;
+    const catTitle = isUncat ? t.uncategorized : catName;
+    const catIcon = cat.icon || '📁';
+
+    const catPeersTotal = data.peers.filter(p => isUncat ? !p.group : p.group === catName);
+    if (catPeersTotal.length === 0 && !isUncat) return;
+
+    const catPeersFiltered = filtered.filter(p => isUncat ? !p.group : p.group === catName);
+    if (catPeersFiltered.length === 0) return;
+
+    const sortedPeers = sortPeers(catPeersFiltered);
+    const onlineCount = catPeersTotal.filter(p => p.isOnline).length;
+    const isCollapsed = collapsedCategories[catKey] !== undefined ? collapsedCategories[catKey] : (accordionDefault === 'collapsed');
+
+    catHtmlParts.push(`
+      <div class="category-group ${isCollapsed ? 'collapsed' : ''}">
+        <div class="category-header" onclick="toggleCategory('${escapeJs(catKey)}')">
+          <div class="category-left">
+            <span>${escapeHtml(catIcon)}</span>
+            <span>${escapeHtml(catTitle)}</span>
+            <span class="category-badge">${t.peersCount(catPeersTotal.length, onlineCount)}</span>
+          </div>
+          <span class="category-chevron">▼</span>
+        </div>
+        <div class="category-body">
+          ${sortedPeers.map(p => renderClientCard(p)).join('')}
         </div>
       </div>
-      <div class="client-chart" title="${t.activity}: ${fmtSpeed(totalSpeed)}">
-        ${renderSparkline(clientHistory[pub], pub)}
+    `);
+  });
+
+  list.innerHTML = catHtmlParts.join('');
+}
+
+async function fetchClients() {
+  if (authRequired && !authPassword) {
+    stopPolling();
+    showAuthModal();
+    return;
+  }
+  try {
+    const data = await apiFetch(`${API}?action=status`);
+    if (!data) return;
+    if (data.code === 'unauthorized' || (data.status === 'error' && data.auth_required)) {
+      authRequired = true;
+      stopPolling();
+      showAuthModal();
+      return;
+    }
+    authRequired = Boolean(data.auth_required);
+    updateLogoutButton();
+
+    if (Array.isArray(data.categories)) {
+      serverCategories = data.categories;
+      updateCategoryDropdowns();
+      if (activeTab === 'settings') renderSettingsCategories();
+    }
+
+    lastClientsData = data;
+    renderPeerList(data);
+  } catch(e) {
+    const t = I18N[currentLang];
+    document.getElementById('clientsList').innerHTML = `<div class="empty">${t.netError}${escapeHtml(e.message)}</div>`;
+  }
+}
+
+// ---- Categories Management ----
+const EMOJI_PALETTE = ['🏠', '💻', '📱', '🖥️', '🎮', '📺', '🚗', '🌐', '🏢', '💼', '🔒', '🛡️', '🔑', '🚀', '⚡', '🌍', '📦', '👥', '👤', '👨‍👩‍👧', '🏷️', '📌', '🎯', '📡', '📶', '🤖', '🐱', '🐶', '🍏', '🐧', '⭐️', '🍕'];
+
+function updateCategoryDropdowns() {
+  const t = I18N[currentLang];
+  const opts = [`<option value="">📁 ${t.uncategorized}</option>`];
+  serverCategories.forEach(c => {
+    opts.push(`<option value="${escapeHtml(c.name)}">${escapeHtml(c.icon || '📁')} ${escapeHtml(c.name)}</option>`);
+  });
+  const cSelect = document.getElementById('createGroup');
+  const eSelect = document.getElementById('editGroup');
+  if (cSelect) {
+    const curVal = cSelect.value;
+    cSelect.innerHTML = opts.join('');
+    cSelect.value = curVal;
+  }
+  if (eSelect) {
+    const curVal = eSelect.value;
+    eSelect.innerHTML = opts.join('');
+    eSelect.value = curVal;
+  }
+}
+
+function renderSettingsCategories() {
+  const t = I18N[currentLang];
+  const container = document.getElementById('settingsCatList');
+  if (!container) return;
+  if (!serverCategories || serverCategories.length === 0) {
+    container.innerHTML = `<div class="settings-desc" style="font-style:italic;">${t.emptyList || 'No categories yet.'}</div>`;
+    return;
+  }
+  const peers = (lastClientsData && lastClientsData.peers) || [];
+  container.innerHTML = serverCategories.map((c, idx) => {
+    const count = peers.filter(p => p.group === c.name).length;
+    return `<div class="cat-item">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:18px;">${escapeHtml(c.icon || '📁')}</span>
+        <span style="font-weight:600; font-size:13px;">${escapeHtml(c.name)}</span>
+        <span class="category-badge">${count} peers</span>
       </div>
-      <div class="client-speed">
-        <div class="speed-item">
-          <span class="speed-val">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
-            ${fmtSpeed(rxSpeed)}
-          </span>
-          <span class="speed-bps">${fmtBytes(p.transfer_rx)}</span>
-        </div>
-        <div class="speed-item">
-          <span class="speed-val">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-            ${fmtSpeed(txSpeed)}
-          </span>
-          <span class="speed-bps">${fmtBytes(p.transfer_tx)}</span>
-        </div>
-      </div>
-      <div class="client-toggle">
-        <label class="switch" title="${t.tooltipToggle}">
-          <input type="checkbox" ${chk} onchange="doToggle('${pub}', this.checked)">
-          <span class="slider"></span>
-        </label>
-      </div>
-      <div class="action-btns">
-        <button class="btn-icon" title="${t.tooltipQr}" onclick="openQr('${pub}')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="4" height="4"/><line x1="21" y1="14" x2="21" y2="14.01"/><line x1="14" y1="21" x2="14" y2="21.01"/><line x1="21" y1="21" x2="21" y2="21.01"/></svg></button>
-        <button class="btn-icon download" title="${t.tooltipDownload}" onclick="downloadConf('${pub}','${jsName}')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></button>
-        <button class="btn-icon edit" title="${t.tooltipEdit}" onclick="openEdit('${pub}','${jsName}','${safeIp}')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
-        <button class="btn-icon danger" title="${t.tooltipDelete}" onclick="openDelete('${pub}','${jsName}')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+      <div style="display:flex; gap:4px;">
+        <button class="btn-icon edit" onclick="openCategoryModal(${idx})" title="${t.tooltipEdit}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+        <button class="btn-icon danger" onclick="deleteCategory(${idx})" title="${t.tooltipDelete}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
       </div>
     </div>`;
   }).join('');
 }
 
-// ---- Create ----
+function openCategoryModal(idx = -1) {
+  const t = I18N[currentLang];
+  const modalTitle = document.getElementById('categoryModalTitle');
+  const inputName = document.getElementById('catInputName');
+  const inputIcon = document.getElementById('catInputIcon');
+  const editIdx = document.getElementById('catEditIndex');
+  editIdx.value = String(idx);
+
+  if (idx >= 0 && serverCategories[idx]) {
+    if (modalTitle) modalTitle.textContent = t.categoryModalTitleEdit;
+    inputName.value = serverCategories[idx].name;
+    inputIcon.value = serverCategories[idx].icon || '📁';
+  } else {
+    if (modalTitle) modalTitle.textContent = t.categoryModalTitle;
+    inputName.value = '';
+    inputIcon.value = '📁';
+  }
+
+  const grid = document.getElementById('emojiGrid');
+  if (grid) {
+    grid.innerHTML = EMOJI_PALETTE.map(e => {
+      const isSel = e === inputIcon.value ? 'selected' : '';
+      return `<div class="emoji-cell ${isSel}" onclick="selectEmoji('${e}')">${e}</div>`;
+    }).join('');
+  }
+
+  openModal('categoryModal');
+  setTimeout(() => inputName.focus(), 60);
+}
+
+function selectEmoji(e) {
+  document.getElementById('catInputIcon').value = e;
+  document.querySelectorAll('.emoji-cell').forEach(cell => {
+    cell.classList.toggle('selected', cell.textContent === e);
+  });
+}
+
+async function submitCategory() {
+  const t = I18N[currentLang];
+  const name = document.getElementById('catInputName').value.trim();
+  const icon = document.getElementById('catInputIcon').value.trim() || '📁';
+  const idx = parseInt(document.getElementById('catEditIndex').value, 10);
+  if (!name) return alert(t.enterNameAlert);
+
+  const updated = [...serverCategories];
+  if (idx >= 0 && idx < updated.length) {
+    updated[idx] = { name, icon };
+  } else {
+    if (updated.some(c => c.name.toLowerCase() === name.toLowerCase())) {
+      return alert(t.categoryExistsAlert);
+    }
+    updated.push({ name, icon });
+  }
+
+  const btn = document.getElementById('btnCategorySubmit');
+  btn.disabled = true;
+  try {
+    const url = `${API}?action=save_categories&categories=${encodeURIComponent(JSON.stringify(updated))}`;
+    const data = await apiFetch(url, { method: 'POST' });
+    if (data.status === 'ok') {
+      serverCategories = updated;
+      closeModal('categoryModal');
+      renderSettingsCategories();
+      updateCategoryDropdowns();
+      if (lastClientsData) renderPeerList(lastClientsData);
+    } else {
+      alert(t.apiError + (data.message || '?'));
+    }
+  } catch(e) {
+    alert(t.netError + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function deleteCategory(idx) {
+  const t = I18N[currentLang];
+  const target = serverCategories[idx];
+  if (!target) return;
+  if (!confirm(t.deleteCategoryConfirm(target.name))) return;
+
+  const updated = serverCategories.filter((_, i) => i !== idx);
+  try {
+    const url = `${API}?action=save_categories&categories=${encodeURIComponent(JSON.stringify(updated))}`;
+    const data = await apiFetch(url, { method: 'POST' });
+    if (data.status === 'ok') {
+      serverCategories = updated;
+      renderSettingsCategories();
+      updateCategoryDropdowns();
+      fetchClients();
+    } else {
+      alert(t.apiError + (data.message || '?'));
+    }
+  } catch(e) {
+    alert(t.netError + e.message);
+  }
+}
+
+// ---- Settings: Security, Prefs, Export All ----
+async function saveAdminPassword() {
+  const t = I18N[currentLang];
+  const oldInput = document.getElementById('inputOldPassword');
+  const newInput = document.getElementById('inputNewPassword');
+  const confirmInput = document.getElementById('inputConfirmPassword');
+
+  const oldPass = oldInput ? oldInput.value : '';
+  const newPass = newInput ? newInput.value.trim() : '';
+  const confirmPass = confirmInput ? confirmInput.value.trim() : '';
+
+  if (authRequired && !oldPass) return alert(t.enterOldPasswordAlert);
+  if (!newPass) return alert(t.enterPasswordAlert);
+  if (newPass !== confirmPass) return alert(t.passwordsMismatchAlert);
+
+  const btn = document.getElementById('btnSavePassword');
+  if (btn) btn.disabled = true;
+  try {
+    const url = `${API}?action=set_password&new_password=${encodeURIComponent(newPass)}&old_password=${encodeURIComponent(oldPass || authPassword)}`;
+    const data = await apiFetch(url, { method: 'POST' });
+    if (data && data.status === 'ok') {
+      authPassword = newPass;
+      localStorage.setItem('awgit_password', authPassword);
+      authRequired = true;
+      if (oldInput) oldInput.value = '';
+      if (newInput) newInput.value = '';
+      if (confirmInput) confirmInput.value = '';
+      updateLogoutButton();
+      alert(t.passwordSavedAlert);
+    } else {
+      alert(t.apiError + ((data && data.message) || '?'));
+    }
+  } catch(e) {
+    alert(t.netError + e.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+async function removeAdminPassword() {
+  const t = I18N[currentLang];
+  if (!confirm(t.removePasswordConfirm)) return;
+  const oldInput = document.getElementById('inputOldPassword');
+  const oldPass = (oldInput && oldInput.value) ? oldInput.value : authPassword;
+
+  const btn = document.getElementById('btnRemovePassword');
+  if (btn) btn.disabled = true;
+  try {
+    const url = `${API}?action=set_password&new_password=&old_password=${encodeURIComponent(oldPass)}`;
+    const data = await apiFetch(url, { method: 'POST' });
+    if (data && data.status === 'ok') {
+      authPassword = '';
+      localStorage.removeItem('awgit_password');
+      authRequired = false;
+      const oldInp = document.getElementById('inputOldPassword');
+      const newInp = document.getElementById('inputNewPassword');
+      const confInp = document.getElementById('inputConfirmPassword');
+      if (oldInp) oldInp.value = '';
+      if (newInp) newInp.value = '';
+      if (confInp) confInp.value = '';
+      updateLogoutButton();
+      alert(t.passwordRemovedAlert);
+    } else {
+      alert(t.apiError + ((data && data.message) || '?'));
+    }
+  } catch(e) {
+    alert(t.netError + e.message);
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+function changeInterval(val) {
+  const interval = parseInt(val, 10);
+  localStorage.setItem('awgit_interval', String(interval));
+  if (interval === 0) {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = null;
+    pollIntervalMs = 0;
+  } else {
+    startPolling(interval);
+  }
+}
+
+function changeAccordionDefault(val) {
+  accordionDefault = val;
+  localStorage.setItem('awgit_accordion_default', val);
+  collapsedCategories = {};
+  localStorage.removeItem('awgit_collapsed');
+  if (lastClientsData) renderPeerList(lastClientsData);
+}
+
+async function exportAllClients() {
+  const t = I18N[currentLang];
+  if (!lastClientsData || !lastClientsData.peers || lastClientsData.peers.length === 0) {
+    return alert(t.exportAllEmpty);
+  }
+  let exported = 0;
+  for (const p of lastClientsData.peers) {
+    try {
+      const res = await apiFetch(`${API}?action=client_config&public_key=${encodeURIComponent(p.public_key)}`);
+      if (res && res.status === 'ok' && res.config) {
+        triggerDownload(res.name || p.name, res.config);
+        exported++;
+        await new Promise(r => setTimeout(r, 200));
+      }
+    } catch(e) {
+      console.error('Export error for peer', p.name, e);
+    }
+  }
+  if (exported === 0) {
+    alert(t.exportAllEmpty);
+  }
+}
+
+// ---- Autonomous HTML Client Passport ----
+function generatePassportHtml(clientName, clientIp, serverEp, createdAt, confStr, qrDataUrl) {
+  const t = I18N[currentLang];
+  const safeName = escapeHtml(clientName);
+  const dateStr = createdAt > 0 ? new Date(createdAt * 1000).toLocaleString(currentLang === 'ru' ? 'ru-RU' : 'en-US') : new Date().toLocaleString(currentLang === 'ru' ? 'ru-RU' : 'en-US');
+  const safeConf = escapeHtml(confStr);
+  const jsConf = escapeJs(confStr);
+
+  return `<!DOCTYPE html>
+<html lang="${currentLang}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${safeName} • ${t.passportTitle}</title>
+  <style>
+    :root {
+      --bg: #161618;
+      --card: #202024;
+      --border: rgba(255,255,255,0.08);
+      --text: #f4f4f5;
+      --muted: #9ba1a6;
+      --green: #10b981;
+      --btn: #2d2d33;
+      --btn-h: #3a3a42;
+    }
+    @media (prefers-color-scheme: light) {
+      :root {
+        --bg: #f4f4f5;
+        --card: #ffffff;
+        --border: rgba(0,0,0,0.08);
+        --text: #18181b;
+        --muted: #71717a;
+        --btn: #e4e4e7;
+        --btn-h: #d4d4d8;
+      }
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px 16px; display: flex; justify-content: center; align-items: center; }
+    .passport-card { width: 100%; max-width: 480px; background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 24px; box-shadow: 0 10px 30px rgba(0,0,0,0.25); display: flex; flex-direction: column; gap: 18px; }
+    .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); padding-bottom: 14px; }
+    .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 18px; }
+    .brand svg { fill: #e03131; width: 24px; height: 24px; }
+    .badge { font-size: 11px; padding: 3px 8px; border-radius: 12px; background: rgba(16,185,129,0.15); color: var(--green); font-weight: 600; }
+    .client-info { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: rgba(128,128,128,0.05); padding: 12px; border-radius: 10px; border: 1px solid var(--border); font-size: 12px; }
+    .info-label { color: var(--muted); margin-bottom: 2px; }
+    .info-val { font-weight: 600; }
+    .qr-section { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 10px 0; }
+    .qr-img { width: 220px; height: 220px; border-radius: 12px; background: #ffffff; padding: 10px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); }
+    .btn-row { display: flex; gap: 10px; width: 100%; }
+    .btn { flex: 1; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); background: var(--btn); color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; text-align: center; transition: all 0.15s; }
+    .btn:hover { background: var(--btn-h); }
+    .btn-primary { background: var(--green); color: #fff; border-color: transparent; }
+    .btn-primary:hover { background: #059669; }
+    .guide { border-top: 1px solid var(--border); padding-top: 14px; font-size: 12px; }
+    .guide-title { font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .guide-step { margin-bottom: 6px; color: var(--muted); line-height: 1.4; }
+    .guide-step b { color: var(--text); }
+    details { border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 12px; }
+    summary { cursor: pointer; color: var(--muted); font-weight: 500; outline: none; }
+    pre { margin-top: 10px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 6px; overflow-x: auto; font-family: monospace; font-size: 11px; white-space: pre-wrap; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div class="passport-card">
+    <div class="header">
+      <div class="brand">
+        <svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 2.18l7 3.12v4.7c0 4.54-3.14 8.78-7 9.88-3.86-1.1-7-5.34-7-9.88V6.3l7-3.12z"/></svg>
+        <span>AmneziaWG</span>
+      </div>
+      <span class="badge">AwgIt Passport</span>
+    </div>
+
+    <div class="client-info">
+      <div>
+        <div class="info-label">${escapeHtml(t.modalCreateNameLabel)}</div>
+        <div class="info-val">${safeName}</div>
+      </div>
+      <div>
+        <div class="info-label">${escapeHtml(t.modalEditIpLabel)}</div>
+        <div class="info-val">${escapeHtml(clientIp)}</div>
+      </div>
+      <div>
+        <div class="info-label">Endpoint</div>
+        <div class="info-val">${escapeHtml(serverEp)}</div>
+      </div>
+      <div>
+        <div class="info-label">${escapeHtml(t.passportCreated)}</div>
+        <div class="info-val">${escapeHtml(dateStr)}</div>
+      </div>
+    </div>
+
+    <div class="qr-section">
+      <img class="qr-img" src="${qrDataUrl}" alt="QR Code">
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="dlConf()">📥 ${escapeHtml(t.passportDownloadBtn)}</button>
+        <button class="btn" onclick="cpConf()">📋 ${escapeHtml(t.passportCopyConfig)}</button>
+      </div>
+    </div>
+
+    <div class="guide">
+      <div class="guide-title">📖 ${escapeHtml(t.passportInstructions)}</div>
+      <div class="guide-step"><b>${escapeHtml(t.passportStep1)}:</b> ${escapeHtml(t.passportStep1Desc)}</div>
+      <div class="guide-step"><b>${escapeHtml(t.passportStep2)}:</b> ${escapeHtml(t.passportStep2Desc)}</div>
+      <div class="guide-step"><b>${escapeHtml(t.passportStep3)}:</b> ${escapeHtml(t.passportStep3Desc)}</div>
+    </div>
+
+    <details>
+      <summary>${escapeHtml(t.passportConfigToggle)}</summary>
+      <pre>${safeConf}</pre>
+    </details>
+  </div>
+
+  <script>
+    const cfg = "${jsConf}";
+    function dlConf() {
+      const b = new Blob([cfg], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(b);
+      a.download = '${safeName}.conf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+    function cpConf() {
+      navigator.clipboard.writeText(cfg).then(() => alert('${escapeJs(t.passportCopied)}'));
+    }
+  <\/script>
+</body>
+</html>`;
+}
+
+function exportCurrentPassport() {
+  if (!confText) return;
+  const canvas = document.querySelector('#qrBox canvas');
+  let qrDataUrl = '';
+  if (canvas) {
+    qrDataUrl = canvas.toDataURL('image/png');
+  } else {
+    const img = document.querySelector('#qrBox img');
+    if (img) qrDataUrl = img.src;
+  }
+  const epMatch = confText.match(/Endpoint\s*=\s*([^\r\n]+)/);
+  const ipMatch = confText.match(/Address\s*=\s*([^\r\n]+)/);
+  const serverEp = epMatch ? epMatch[1] : '';
+  const clientIp = ipMatch ? ipMatch[1] : '';
+  const now = Math.floor(Date.now() / 1000);
+
+  const htmlContent = generatePassportHtml(confName, clientIp, serverEp, now, confText, qrDataUrl);
+  triggerDownload('passport_' + confName, htmlContent, '.html');
+}
+
+async function exportPassport(pub, name) {
+  const t = I18N[currentLang];
+  try {
+    const res = await apiFetch(`${API}?action=client_config&public_key=${encodeURIComponent(pub)}`);
+    if (res.status !== 'ok' || !res.config) {
+      return alert(t.noConfigAlert + (res.message || '?'));
+    }
+    const clientName = res.name || name;
+    const confStr = res.config;
+    const epMatch = confStr.match(/Endpoint\s*=\s*([^\r\n]+)/);
+    const ipMatch = confStr.match(/Address\s*=\s*([^\r\n]+)/);
+    const serverEp = epMatch ? epMatch[1] : '';
+    const clientIp = ipMatch ? ipMatch[1] : '';
+
+    const tmpDiv = document.createElement('div');
+    tmpDiv.style.display = 'none';
+    document.body.appendChild(tmpDiv);
+    new QRCode(tmpDiv, {
+      text: confStr,
+      width: 280,
+      height: 280,
+      colorDark: '#000000',
+      colorLight: '#ffffff',
+      correctLevel: QRCode.CorrectLevel.M
+    });
+    let qrDataUrl = '';
+    const canvas = tmpDiv.querySelector('canvas');
+    if (canvas) {
+      qrDataUrl = canvas.toDataURL('image/png');
+    } else {
+      const img = tmpDiv.querySelector('img');
+      if (img) qrDataUrl = img.src;
+    }
+    document.body.removeChild(tmpDiv);
+
+    let createdTs = 0;
+    if (lastClientsData && lastClientsData.peers) {
+      const found = lastClientsData.peers.find(p => p.public_key === pub);
+      if (found && found.created_at) createdTs = found.created_at;
+    }
+
+    const htmlContent = generatePassportHtml(clientName, clientIp, serverEp, createdTs, confStr, qrDataUrl);
+    triggerDownload('passport_' + clientName, htmlContent, '.html');
+  } catch(e) {
+    alert(t.netError + e.message);
+  }
+}
+
+// ---- Create Client ----
 function openCreateModal() {
+  updateCategoryDropdowns();
   document.getElementById('createName').value = '';
+  document.getElementById('createNotes').value = '';
+  const groupSel = document.getElementById('createGroup');
+  if (groupSel) groupSel.value = '';
   openModal('createModal');
   setTimeout(() => document.getElementById('createName').focus(), 60);
 }
+
 async function submitCreate() {
   const t = I18N[currentLang];
   const name = document.getElementById('createName').value.trim();
+  const group = document.getElementById('createGroup') ? document.getElementById('createGroup').value.trim() : '';
+  const notes = document.getElementById('createNotes') ? document.getElementById('createNotes').value.trim() : '';
   if (!name) return alert(t.enterNameAlert);
+
   const btn = document.getElementById('btnCreate');
-  btn.disabled = true; btn.textContent = t.creating;
+  btn.disabled = true;
+  btn.textContent = t.creating;
   try {
-    const res = await fetch(`${API}?action=create&name=${encodeURIComponent(name)}`, { method: 'POST' });
-    const data = await res.json();
-    if (data.status === 'ok') {
+    const url = `${API}?action=create&name=${encodeURIComponent(name)}&group=${encodeURIComponent(group)}&notes=${encodeURIComponent(notes)}`;
+    const data = await apiFetch(url, { method: 'POST' });
+    if (data && data.status === 'ok') {
       closeModal('createModal');
-      showQrModal(data.peer.name, data.peer.config);
+      if (data.peer && data.peer.config) {
+        showQrModal(data.peer.name, data.peer.config);
+      }
       fetchClients();
-    } else alert(t.apiError + (data.message||'?'));
-  } catch(e) { alert(t.netError + e.message); }
-  finally { btn.disabled = false; btn.textContent = t.create; }
+    } else {
+      alert(t.apiError + ((data && data.message) || '?'));
+    }
+  } catch(e) {
+    alert(t.netError + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = t.create;
+  }
 }
 
-// ---- Edit ----
-function openEdit(pub, name, ip) {
+// ---- Edit Client ----
+function openEdit(pub, name, ip, group = '', notes = '') {
+  updateCategoryDropdowns();
   document.getElementById('editPubKey').value = pub;
   document.getElementById('editName').value = name;
   document.getElementById('editIp').value = ip;
+  const groupSel = document.getElementById('editGroup');
+  if (groupSel) groupSel.value = group || '';
+  const notesInp = document.getElementById('editNotes');
+  if (notesInp) notesInp.value = notes || '';
   openModal('editModal');
   setTimeout(() => document.getElementById('editName').focus(), 60);
 }
+
 async function submitEdit() {
   const t = I18N[currentLang];
   const pub = document.getElementById('editPubKey').value;
   const name = document.getElementById('editName').value.trim();
   const ip = document.getElementById('editIp').value.trim();
+  const group = document.getElementById('editGroup') ? document.getElementById('editGroup').value.trim() : '';
+  const notes = document.getElementById('editNotes') ? document.getElementById('editNotes').value.trim() : '';
   if (!name) return alert(t.enterNameAlert);
+
   const btn = document.getElementById('btnEdit');
-  btn.disabled = true; btn.textContent = t.saving;
+  btn.disabled = true;
+  btn.textContent = t.saving;
   try {
-    const res = await fetch(`${API}?action=update&public_key=${encodeURIComponent(pub)}&name=${encodeURIComponent(name)}&allowed_ips=${encodeURIComponent(ip)}`, { method: 'POST' });
-    const data = await res.json();
-    if (data.status === 'ok') { closeModal('editModal'); fetchClients(); }
-    else alert(t.apiError + (data.message||'?'));
-  } catch(e) { alert(t.netError + e.message); }
-  finally { btn.disabled = false; btn.textContent = t.save; }
+    const url = `${API}?action=update&public_key=${encodeURIComponent(pub)}&name=${encodeURIComponent(name)}&allowed_ips=${encodeURIComponent(ip)}&group=${encodeURIComponent(group)}&notes=${encodeURIComponent(notes)}`;
+    const data = await apiFetch(url, { method: 'POST' });
+    if (data && data.status === 'ok') {
+      closeModal('editModal');
+      fetchClients();
+    } else {
+      alert(t.apiError + ((data && data.message) || '?'));
+    }
+  } catch(e) {
+    alert(t.netError + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = t.save;
+  }
 }
 
 // ---- QR & Download ----
 async function openQr(pub) {
   const t = I18N[currentLang];
   try {
-    const res = await fetch(`${API}?action=client_config&public_key=${encodeURIComponent(pub)}`);
-    const data = await res.json();
-    if (data.status === 'ok') showQrModal(data.name, data.config);
-    else alert(t.noConfigAlert + (data.message||'?'));
+    const res = await apiFetch(`${API}?action=client_config&public_key=${encodeURIComponent(pub)}`);
+    if (res && res.status === 'ok') showQrModal(res.name, res.config);
+    else alert(t.noConfigAlert + ((res && res.message) || '?'));
   } catch(e) { alert(t.netError + e.message); }
 }
 function showQrModal(name, cfg) {
@@ -859,9 +2231,9 @@ function showQrModal(name, cfg) {
   };
   openModal('qrModal');
 }
-function triggerDownload(name, cfg) {
-  const fileName = (name || 'client') + '.conf';
-  const blob = new Blob([cfg], { type: 'text/plain;charset=utf-8' });
+function triggerDownload(name, content, ext = '.conf') {
+  const fileName = (name || 'client') + (name.endsWith(ext) ? '' : ext);
+  const blob = (content instanceof Blob) ? content : new Blob([content], { type: ext === '.html' ? 'text/html;charset=utf-8' : 'text/plain;charset=utf-8' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = fileName;
@@ -873,12 +2245,11 @@ function triggerDownload(name, cfg) {
 async function downloadConf(pub, name) {
   const t = I18N[currentLang];
   try {
-    const res = await fetch(`${API}?action=client_config&public_key=${encodeURIComponent(pub)}`);
-    const data = await res.json();
-    if (data.status === 'ok') {
-      triggerDownload(data.name || name, data.config);
+    const res = await apiFetch(`${API}?action=client_config&public_key=${encodeURIComponent(pub)}`);
+    if (res && res.status === 'ok') {
+      triggerDownload(res.name || name, res.config);
     } else {
-      alert(t.noConfigAlert + (data.message || '?'));
+      alert(t.noConfigAlert + ((res && res.message) || '?'));
     }
   } catch(e) {
     alert(t.netError + e.message);
@@ -894,7 +2265,7 @@ function copyConf() {
 async function doToggle(pub, enabled) {
   const disabled = enabled ? '0' : '1';
   try {
-    await fetch(`${API}?action=toggle&public_key=${encodeURIComponent(pub)}&disabled=${disabled}`, { method: 'POST' });
+    await apiFetch(`${API}?action=toggle&public_key=${encodeURIComponent(pub)}&disabled=${disabled}`, { method: 'POST' });
     fetchClients();
   } catch(e) {
     console.error('Toggle error:', e);
@@ -915,13 +2286,12 @@ async function submitDelete() {
   const btn = document.getElementById('btnDeleteSubmit');
   btn.disabled = true; btn.textContent = t.deleting;
   try {
-    const res = await fetch(`${API}?action=delete&public_key=${encodeURIComponent(pub)}`, { method: 'POST' });
-    const data = await res.json();
-    if (data.status === 'ok') {
+    const data = await apiFetch(`${API}?action=delete&public_key=${encodeURIComponent(pub)}`, { method: 'POST' });
+    if (data && data.status === 'ok') {
       closeModal('deleteModal');
       fetchClients();
     } else {
-      alert(t.deleteFailed + (data.message || '?'));
+      alert(t.deleteFailed + ((data && data.message) || '?'));
     }
   } catch(e) {
     alert(t.netError + e.message);
@@ -935,12 +2305,13 @@ async function submitDelete() {
 async function doBackup() {
   const t = I18N[currentLang];
   try {
-    const res = await fetch(`${API}?action=backup`);
-    const data = await res.json();
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}));
-    a.download = 'awgit-backup-' + new Date().toISOString().slice(0,10) + '.json';
-    a.click();
+    const data = await apiFetch(`${API}?action=backup`);
+    if (data) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], {type:'application/json'}));
+      a.download = 'awgit-backup-' + new Date().toISOString().slice(0,10) + '.json';
+      a.click();
+    }
   } catch(e) { alert(t.backupFailed + e.message); }
 }
 
@@ -956,39 +2327,55 @@ async function submitRestore(input) {
   } catch(e) { alert(t.restoreInvalidFile); input.value=''; return; }
   if (!confirm(t.restoreConfirm(file.name))) { input.value=''; return; }
   try {
-    const res = await fetch(`${API}?action=restore`, { method: 'POST', headers:{'Content-Type':'application/json'}, body: text });
-    const data = await res.json();
-    alert(t.restoreSuccess(data.restored ?? '?'));
-    fetchClients();
+    const data = await apiFetch(`${API}?action=restore`, { method: 'POST', headers:{'Content-Type':'application/json'}, body: text });
+    if (data) {
+      alert(t.restoreSuccess(data.restored ?? '?'));
+      fetchClients();
+    }
   } catch(e) { alert(t.restoreFailed + e.message); }
   input.value = '';
 }
 
 // ---- Init & Dynamic Polling ----
 let pollTimer = null;
-let pollIntervalMs = 3000;
+
+function stopPolling() {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = null;
+}
 
 function startPolling(interval) {
-  if (pollTimer) clearInterval(pollTimer);
-  pollIntervalMs = interval;
-  pollTimer = setInterval(fetchClients, pollIntervalMs);
+  stopPolling();
+  if (interval !== undefined) pollIntervalMs = Number(interval);
+  if (authRequired && !authPassword) {
+    return;
+  }
+  if (pollIntervalMs > 0) {
+    pollTimer = setInterval(fetchClients, pollIntervalMs);
+  }
 }
 
 document.addEventListener('visibilitychange', () => {
+  if (authRequired && !authPassword) return;
   if (document.hidden) {
-    startPolling(15000); // 15s in background
+    if (pollIntervalMs > 0) startPolling(15000); // 15s in background
   } else {
     fetchClients();
-    startPolling(3000);  // 3s when active
+    if (pollIntervalMs > 0) startPolling(pollIntervalMs);
   }
 });
 
 (function() {
   const initialLang = getInitialLang();
   setLang(initialLang);
+  updateLogoutButton();
 })();
 fetchClients();
-startPolling(3000);
+if (!authRequired || authPassword) {
+  if (pollIntervalMs > 0) {
+    startPolling(pollIntervalMs);
+  }
+}
 </script>
 </body>
 </html>

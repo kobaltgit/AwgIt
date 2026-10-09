@@ -26,17 +26,30 @@ if [ "$NAME" != "My Test Phone+Extra" ]; then
 fi
 echo "[PASS] urldecode test"
 
-# 2. Test sanitize_name
+# 2. Test sanitize_name (spaces converted to underscores for WireGuard compatibility)
 sanitize_name() {
-    printf '%s' "$1" | sed 's/[^a-zA-Z0-9._ -]//g' | cut -c 1-64
+    printf '%s' "$1" | tr ' ' '_' | sed 's/[^a-zA-Z0-9._-]//g' | cut -c 1-64
 }
 
 CLEAN_NAME=$(sanitize_name "$NAME")
-if [ "$CLEAN_NAME" != "My Test PhoneExtra" ]; then
+if [ "$CLEAN_NAME" != "My_Test_PhoneExtra" ]; then
     echo "FAIL: Sanitized name mismatch: $CLEAN_NAME"
     exit 1
 fi
-echo "[PASS] sanitize_name test"
+echo "[PASS] sanitize_name test (spaces -> underscores)"
+
+# 2.1 Test sanitize_text (preserves UTF-8 / Cyrillic / emojis, strips dangerous shell chars)
+sanitize_text() {
+    printf '%s' "$1" | tr -d '\r\n"\\;`$&|><' | tr -d "'" | cut -c 1-128
+}
+
+DIRTY_TEXT="🏠 Семья / Family'; rm -rf /; \`reboot\` \$VAR"
+CLEAN_TEXT=$(sanitize_text "$DIRTY_TEXT")
+if [ "$CLEAN_TEXT" != "🏠 Семья / Family rm -rf / reboot VAR" ]; then
+    echo "FAIL: Sanitized text mismatch: [$CLEAN_TEXT]"
+    exit 1
+fi
+echo "[PASS] sanitize_text test (Cyrillic + Emoji preserved, shell chars stripped)"
 
 # 3. Test generate_conf
 JC="4"; JMIN="40"; JMAX="70"; S1="15"; S2="32"; H1="1"; H2="2"; H3="3"; H4="4"
@@ -72,5 +85,66 @@ if ! printf '%s' "$JSON_PAYLOAD" | grep -q '"status":"ok"'; then
     exit 1
 fi
 echo "[PASS] JSON payload formatting test"
+
+# 5. Test v0.2.0 Auth Guard Mock
+ADMIN_PASS_MOCK="SecretPass123"
+REQ_PASS_VALID="SecretPass123"
+REQ_PASS_INVALID="WrongPass"
+
+check_auth() {
+    _admin="$1"
+    _req="$2"
+    if [ -n "$_admin" ] && [ "$_req" != "$_admin" ]; then
+        return 1
+    fi
+    return 0
+}
+
+if ! check_auth "$ADMIN_PASS_MOCK" "$REQ_PASS_VALID"; then
+    echo "FAIL: Valid pass rejected"
+    exit 1
+fi
+if check_auth "$ADMIN_PASS_MOCK" "$REQ_PASS_INVALID"; then
+    echo "FAIL: Invalid pass accepted"
+    exit 1
+fi
+if ! check_auth "" "$REQ_PASS_INVALID"; then
+    echo "FAIL: No pass set should allow access"
+    exit 1
+fi
+echo "[PASS] Auth Guard mock test"
+
+# 6. Test v0.2.0 Categories Sanitization
+DIRTY_CATS='[{"name":"Family\x27; rm -rf /","icon":"🏠"}]'
+SAFE_CATS=$(printf '%s' "$DIRTY_CATS" | tr -d '\r\n\\;`$&|><' | tr -d "'")
+if [ "$SAFE_CATS" != '[{"name":"Familyx27 rm -rf /","icon":"🏠"}]' ]; then
+    echo "FAIL: Categories sanitization mismatch: $SAFE_CATS"
+    exit 1
+fi
+echo "[PASS] Categories JSON sanitization test"
+
+# 7. Test set_password Old Password Verification Mock
+verify_old_password() {
+    _admin="$1"
+    _old="$2"
+    if [ -n "$_admin" ] && [ "$_old" != "$_admin" ]; then
+        return 1
+    fi
+    return 0
+}
+
+if ! verify_old_password "ExistingPass" "ExistingPass"; then
+    echo "FAIL: Valid current password rejected"
+    exit 1
+fi
+if verify_old_password "ExistingPass" "WrongOldPass"; then
+    echo "FAIL: Invalid current password accepted"
+    exit 1
+fi
+if ! verify_old_password "" "AnyPass"; then
+    echo "FAIL: First time password setup without existing password should succeed"
+    exit 1
+fi
+echo "[PASS] Set password verification mock test"
 
 echo "=== All tests passed successfully! ==="

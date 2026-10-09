@@ -43,6 +43,10 @@ jobs:
         run: |
           busybox sh tests/test_cgi_mock.sh
 
+      - name: Run frontend integrity tests
+        run: |
+          node tests/test_frontend_integrity.js
+
   release:
     name: 'Create GitHub Release'
     needs: test
@@ -57,7 +61,7 @@ jobs:
       - name: Build Tarball Artifact
         run: |
           mkdir -p dist
-          tar -czf dist/awgit-${{ github.ref_name }}.tar.gz -C src awg-api index.html qrcode.min.js install.sh install.ps1 assets/
+          tar -czf dist/awgit-${{ github.ref_name }}.tar.gz -C src awg-api index.html qrcode.min.js manifest.json install.sh install.ps1 assets/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2

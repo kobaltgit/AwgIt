@@ -1,0 +1,17 @@
+{
+  "name": "AwgIt AmneziaWG Manager",
+  "short_name": "AwgIt",
+  "description": "Ultra-lightweight AmneziaWG Client Manager for OpenWrt",
+  "start_url": "/awg/",
+  "display": "standalone",
+  "background_color": "#161618",
+  "theme_color": "#161618",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/awg/assets/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}

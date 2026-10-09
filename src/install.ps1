@@ -19,10 +19,11 @@ Write-Host $header -ForegroundColor Cyan
 $tempDir = $null
 $srcIndex = Join-Path $ScriptDir "index.html"
 $srcQr    = Join-Path $ScriptDir "qrcode.min.js"
+$srcMan   = Join-Path $ScriptDir "manifest.json"
 $srcApi   = Join-Path $ScriptDir "awg-api"
 $srcFav   = Join-Path $ScriptDir "assets\favicon.ico"
 
-if (-not (Test-Path $srcIndex) -or -not (Test-Path $srcQr) -or -not (Test-Path $srcApi)) {
+if (-not (Test-Path $srcIndex) -or -not (Test-Path $srcQr) -or -not (Test-Path $srcApi) -or -not (Test-Path $srcMan)) {
     Write-Host (Msg "Local files missing. Downloading from GitHub repository..." `
                     "Локальные файлы не найдены. Загрузка из репозитория GitHub...") -ForegroundColor Yellow
     $tempDir = Join-Path ([System.IO.Path]::GetTempPath()) ("awgit_" + [System.Guid]::NewGuid().ToString("N"))
@@ -30,11 +31,13 @@ if (-not (Test-Path $srcIndex) -or -not (Test-Path $srcQr) -or -not (Test-Path $
 
     $srcIndex = Join-Path $tempDir "index.html"
     $srcQr    = Join-Path $tempDir "qrcode.min.js"
+    $srcMan   = Join-Path $tempDir "manifest.json"
     $srcApi   = Join-Path $tempDir "awg-api"
     $srcFav   = Join-Path $tempDir "favicon.ico"
 
     Invoke-WebRequest -Uri "$RepoRawUrl/src/index.html" -OutFile $srcIndex -UseBasicParsing
     Invoke-WebRequest -Uri "$RepoRawUrl/src/qrcode.min.js" -OutFile $srcQr -UseBasicParsing
+    Invoke-WebRequest -Uri "$RepoRawUrl/src/manifest.json" -OutFile $srcMan -UseBasicParsing
     Invoke-WebRequest -Uri "$RepoRawUrl/src/assets/favicon.ico" -OutFile $srcFav -UseBasicParsing
     Invoke-WebRequest -Uri "$RepoRawUrl/src/awg-api" -OutFile $srcApi -UseBasicParsing
 }
@@ -44,7 +47,7 @@ try {
     ssh -o StrictHostKeyChecking=no "root@$RouterIp" "mkdir -p /www/awg /www/awg/assets /www/cgi-bin"
 
     Write-Host (Msg "2. Uploading web interface (Frontend)..." "2. Загрузка веб-интерфейса (Frontend)...") -ForegroundColor Yellow
-    scp -O -o StrictHostKeyChecking=no $srcIndex $srcQr "root@${RouterIp}:/www/awg/"
+    scp -O -o StrictHostKeyChecking=no $srcIndex $srcQr $srcMan "root@${RouterIp}:/www/awg/"
     if (Test-Path $srcFav) {
         scp -O -o StrictHostKeyChecking=no $srcFav "root@${RouterIp}:/www/awg/assets/favicon.ico"
         scp -O -o StrictHostKeyChecking=no $srcFav "root@${RouterIp}:/www/awg/favicon.ico"

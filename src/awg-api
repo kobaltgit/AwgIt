@@ -33,9 +33,19 @@ is_valid_key() {
     return 0
 }
 
-# Helper: sanitize client name (keep only alphanumeric, dash, underscore, dot, space; max 64 chars)
+# Helper: sanitize client name (replaces spaces with underscores for WG interface compatibility; max 64 chars)
 sanitize_name() {
-    printf '%s' "$1" | sed 's/[^a-zA-Z0-9._ -]//g' | cut -c 1-64
+    printf '%s' "$1" | tr ' ' '_' | sed 's/[^a-zA-Z0-9._-]//g' | cut -c 1-64
+}
+
+# Helper: sanitize text with UTF-8 / Cyrillic / emoji support (strips dangerous shell characters)
+sanitize_text() {
+    printf '%s' "$1" | tr -d '\r\n"\\;`$&|><' | tr -d "'" | cut -c 1-128
+}
+
+# Helper: sanitize admin password (preserves symbols like # $ & ! *; strips newlines and single quotes for UCI safety)
+sanitize_password() {
+    printf '%s' "$1" | tr -d "\r\n'" | cut -c 1-128
 }
 
 # Helper: validate IPv4 address with optional CIDR
@@ -92,6 +102,91 @@ fi
 
 [ -z "$ACTION" ] && ACTION="status"
 
+# Fetch admin password from UCI
+ADMIN_PASS=$(uci -q get network.awgit_settings.admin_password || true)
+
+# Extract request password from query/body or HTTP header (cut -d '=' -f 2- preserves passwords containing '=')
+REQ_PASS=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^password=' | head -n 1 | cut -d '=' -f 2-)
+if [ -n "$REQ_PASS" ]; then
+    REQ_PASS=$(urldecode "$REQ_PASS")
+    REQ_PASS=$(sanitize_password "$REQ_PASS")
+fi
+if [ -z "$REQ_PASS" ] && [ -n "$HTTP_X_AWGIT_PASSWORD" ]; then
+    REQ_PASS=$(sanitize_password "$HTTP_X_AWGIT_PASSWORD")
+fi
+
+# ==========================================================
+# ACTION: AUTH CHECK
+# ==========================================================
+if [ "$ACTION" = "auth_check" ]; then
+    if [ -n "$ADMIN_PASS" ]; then
+        if [ "$REQ_PASS" = "$ADMIN_PASS" ]; then
+            printf '{"status":"ok","authenticated":true,"auth_required":true}\n'
+        else
+            printf '{"status":"error","code":"unauthorized","authenticated":false,"auth_required":true,"message":"Invalid admin password"}\n'
+        fi
+    else
+        printf '{"status":"ok","authenticated":true,"auth_required":false}\n'
+    fi
+    exit 0
+fi
+
+# ==========================================================
+# AUTH GUARD: BLOCK UNAUTHORIZED REQUESTS
+# ==========================================================
+if [ -n "$ADMIN_PASS" ] && [ "$REQ_PASS" != "$ADMIN_PASS" ]; then
+    printf '{"status":"error","code":"unauthorized","auth_required":true,"message":"Admin password required"}\n'
+    exit 0
+fi
+
+# ==========================================================
+# ACTION: SET / CHANGE ADMIN PASSWORD
+# ==========================================================
+if [ "$ACTION" = "set_password" ]; then
+    RAW_OLD_PASS=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^old_password=' | head -n 1 | cut -d '=' -f 2-)
+    OLD_PASS=$(urldecode "$RAW_OLD_PASS")
+    [ -n "$OLD_PASS" ] && OLD_PASS=$(sanitize_password "$OLD_PASS")
+    [ -z "$OLD_PASS" ] && OLD_PASS="$REQ_PASS"
+
+    if [ -n "$ADMIN_PASS" ] && [ "$OLD_PASS" != "$ADMIN_PASS" ]; then
+        printf '{"status":"error","message":"Invalid current password"}\n'
+        exit 0
+    fi
+
+    RAW_NEW_PASS=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^new_password=' | head -n 1 | cut -d '=' -f 2-)
+    NEW_PASS=$(urldecode "$RAW_NEW_PASS")
+    [ -n "$NEW_PASS" ] && NEW_PASS=$(sanitize_password "$NEW_PASS")
+
+    uci -q get network.awgit_settings >/dev/null 2>&1 || uci set network.awgit_settings=awgit
+    if [ -n "$NEW_PASS" ]; then
+        uci set network.awgit_settings.admin_password="$NEW_PASS"
+    else
+        uci -q delete network.awgit_settings.admin_password || true
+    fi
+    uci commit network
+    printf '{"status":"ok","message":"Password updated"}\n'
+    exit 0
+fi
+
+# ==========================================================
+# ACTION: SAVE CATEGORIES
+# ==========================================================
+if [ "$ACTION" = "save_categories" ]; then
+    RAW_CATS=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^categories=' | head -n 1 | cut -d '=' -f 2)
+    CATS=$(urldecode "$RAW_CATS")
+    case "$CATS" in
+        \[*\]) ;;
+        *) CATS="[]" ;;
+    esac
+    SAFE_CATS=$(printf '%s' "$CATS" | tr -d '\r\n\\;`$&|><' | tr -d "'")
+
+    uci -q get network.awgit_settings >/dev/null 2>&1 || uci set network.awgit_settings=awgit
+    uci set network.awgit_settings.categories="$SAFE_CATS"
+    uci commit network
+    printf '{"status":"ok","message":"Categories saved"}\n'
+    exit 0
+fi
+
 # Fetch server params from UCI
 SERVER_PORT=$(uci -q get network.${WG_IF}.listen_port || echo "49155")
 SERVER_PRIV=$(uci -q get network.${WG_IF}.private_key)
@@ -143,6 +238,17 @@ if [ "$ACTION" = "status" ] || [ "$ACTION" = "list" ]; then
     printf '      "h1": %s, "h2": %s, "h3": %s, "h4": %s\n' "$H1" "$H2" "$H3" "$H4"
     printf '    }\n'
     printf '  },\n'
+
+    AUTH_REQ="false"
+    [ -n "$ADMIN_PASS" ] && AUTH_REQ="true"
+    CATS_RAW=$(uci -q get network.awgit_settings.categories)
+    case "$CATS_RAW" in
+        \[*\]) ;;
+        *) CATS_RAW="[]" ;;
+    esac
+
+    printf '  "auth_required": %s,\n' "$AUTH_REQ"
+    printf '  "categories": %s,\n' "$CATS_RAW"
     printf '  "peers": [\n'
 
     FIRST_PEER=1
@@ -155,6 +261,10 @@ if [ "$ACTION" = "status" ] || [ "$ACTION" = "list" ]; then
         PRIV=$(uci -q get network.${SEC}.private_key)
         ALLOWED_IP=$(uci -q get network.${SEC}.allowed_ips)
         DISABLED=$(uci -q get network.${SEC}.disabled || echo "0")
+        GROUP=$(uci -q get network.${SEC}.group)
+        NOTES=$(uci -q get network.${SEC}.notes)
+        CREATED=$(uci -q get network.${SEC}.created_at || echo "0")
+        [ -z "$CREATED" ] && CREATED="0"
 
         HAS_CONF="false"
         [ -n "$PRIV" ] && HAS_CONF="true"
@@ -199,7 +309,10 @@ if [ "$ACTION" = "status" ] || [ "$ACTION" = "list" ]; then
         printf '      "latest_handshake": %s,\n' "$LATEST"
         printf '      "transfer_rx": %s,\n' "$RX"
         printf '      "transfer_tx": %s,\n' "$TX"
-        printf '      "endpoint": "%s"\n' "$ENDPOINT"
+        printf '      "endpoint": "%s",\n' "$ENDPOINT"
+        printf '      "group": "%s",\n' "$GROUP"
+        printf '      "notes": "%s",\n' "$NOTES"
+        printf '      "created_at": %s\n' "$CREATED"
         printf '    }'
     done
 
@@ -311,6 +424,14 @@ if [ "$ACTION" = "create" ]; then
     NAME=$(sanitize_name "$NAME")
     [ -z "$NAME" ] && NAME="Client-$NOW"
 
+    RAW_GROUP=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^group=' | head -n 1 | cut -d '=' -f 2)
+    GROUP=$(urldecode "$RAW_GROUP")
+    GROUP=$(sanitize_text "$GROUP")
+
+    RAW_NOTES=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^notes=' | head -n 1 | cut -d '=' -f 2)
+    NOTES=$(urldecode "$RAW_NOTES")
+    NOTES=$(sanitize_text "$NOTES")
+
     PRIV_KEY=$($WG_BIN genkey)
     PUB_KEY=$(printf '%s' "$PRIV_KEY" | $WG_BIN pubkey)
 
@@ -334,6 +455,9 @@ if [ "$ACTION" = "create" ]; then
     uci set network.${SEC_NAME}.private_key="$PRIV_KEY"
     uci set network.${SEC_NAME}.allowed_ips="${CLIENT_IP}/32"
     uci set network.${SEC_NAME}.persistent_keepalive="25"
+    [ -n "$GROUP" ] && uci set network.${SEC_NAME}.group="$GROUP"
+    [ -n "$NOTES" ] && uci set network.${SEC_NAME}.notes="$NOTES"
+    uci set network.${SEC_NAME}.created_at="$NOW"
     uci commit network
 
     $WG_BIN set "$WG_IF" peer "$PUB_KEY" allowed-ips "${CLIENT_IP}/32" persistent-keepalive 25
@@ -349,6 +473,9 @@ if [ "$ACTION" = "create" ]; then
     printf '    "name": "%s",\n' "$NAME"
     printf '    "public_key": "%s",\n' "$PUB_KEY"
     printf '    "allowed_ips": "%s/32",\n' "$CLIENT_IP"
+    printf '    "group": "%s",\n' "$GROUP"
+    printf '    "notes": "%s",\n' "$NOTES"
+    printf '    "created_at": %s,\n' "$NOW"
     printf '    "config": "%s"\n' "$CONF_JSON"
     printf '  }\n'
     printf '}\n'
@@ -424,14 +551,22 @@ if [ "$ACTION" = "toggle" ]; then
 fi
 
 # ==========================================================
-# ACTION: UPDATE PEER (NAME & ALLOWED IPS)
+# ACTION: UPDATE PEER (NAME, ALLOWED IPS, GROUP, NOTES)
 # ==========================================================
-if [ "$ACTION" = "update" ]; then
+if [ "$ACTION" = "update" ] || [ "$ACTION" = "update_peer" ]; then
     TARGET_PUB=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^public_key=' | head -n 1 | cut -d '=' -f 2)
     TARGET_PUB=$(urldecode "$TARGET_PUB")
     RAW_NAME=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^name=' | head -n 1 | cut -d '=' -f 2)
     NEW_NAME=$(urldecode "$RAW_NAME")
     NEW_NAME=$(sanitize_name "$NEW_NAME")
+
+    RAW_GROUP=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^group=' | head -n 1 | cut -d '=' -f 2)
+    NEW_GROUP=$(urldecode "$RAW_GROUP")
+    NEW_GROUP=$(sanitize_text "$NEW_GROUP")
+
+    RAW_NOTES=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^notes=' | head -n 1 | cut -d '=' -f 2)
+    NEW_NOTES=$(urldecode "$RAW_NOTES")
+    NEW_NOTES=$(sanitize_text "$NEW_NOTES")
 
     RAW_IP=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^allowed_ips=' | head -n 1 | cut -d '=' -f 2)
     NEW_IP=$(urldecode "$RAW_IP")
@@ -453,6 +588,20 @@ if [ "$ACTION" = "update" ]; then
         if [ "$PUB" = "$TARGET_PUB" ]; then
             FOUND=1
             [ -n "$NEW_NAME" ] && uci set network.${SEC}.description="$NEW_NAME"
+            if printf '%s' "$QUERY" | grep -q 'group='; then
+                if [ -n "$NEW_GROUP" ]; then
+                    uci set network.${SEC}.group="$NEW_GROUP"
+                else
+                    uci -q delete network.${SEC}.group || true
+                fi
+            fi
+            if printf '%s' "$QUERY" | grep -q 'notes='; then
+                if [ -n "$NEW_NOTES" ]; then
+                    uci set network.${SEC}.notes="$NEW_NOTES"
+                else
+                    uci -q delete network.${SEC}.notes || true
+                fi
+            fi
             if [ -n "$NEW_IP" ]; then
                 case "$NEW_IP" in
                     */*) ;;
@@ -479,9 +628,16 @@ fi
 # ACTION: BACKUP
 # ==========================================================
 if [ "$ACTION" = "backup" ]; then
+    CATS_RAW=$(uci -q get network.awgit_settings.categories)
+    case "$CATS_RAW" in
+        \[*\]) ;;
+        *) CATS_RAW="[]" ;;
+    esac
+
     printf '{\n'
-    printf '  "version": 1,\n'
+    printf '  "version": 2,\n'
     printf '  "created_at": %s,\n' "$NOW"
+    printf '  "categories": %s,\n' "$CATS_RAW"
     printf '  "server": {\n'
     printf '    "endpoint": "%s:%s",\n' "$EXT_IP" "$SERVER_PORT"
     printf '    "public_key": "%s",\n' "$SERVER_PUB"
@@ -497,6 +653,10 @@ if [ "$ACTION" = "backup" ]; then
         PRIV=$(uci -q get network.${SEC}.private_key)
         ALLOWED_IP=$(uci -q get network.${SEC}.allowed_ips)
         DISABLED=$(uci -q get network.${SEC}.disabled || echo "0")
+        GROUP=$(uci -q get network.${SEC}.group)
+        NOTES=$(uci -q get network.${SEC}.notes)
+        CREATED=$(uci -q get network.${SEC}.created_at || echo "0")
+        [ -z "$CREATED" ] && CREATED="0"
 
         if [ "$FIRST_PEER" -eq 0 ]; then
             printf ',\n'
@@ -508,7 +668,10 @@ if [ "$ACTION" = "backup" ]; then
         printf '      "public_key": "%s",\n' "$PUB"
         printf '      "private_key": "%s",\n' "$PRIV"
         printf '      "allowed_ips": "%s",\n' "$ALLOWED_IP"
-        printf '      "disabled": %s\n' "$DISABLED"
+        printf '      "disabled": %s,\n' "$DISABLED"
+        printf '      "group": "%s",\n' "$GROUP"
+        printf '      "notes": "%s",\n' "$NOTES"
+        printf '      "created_at": %s\n' "$CREATED"
         printf '    }'
     done
 
@@ -528,6 +691,14 @@ if [ "$ACTION" = "restore" ]; then
     TMP_IN="/tmp/awg_restore_$$.json"
     printf '%s' "$RAW_BODY" > "$TMP_IN"
 
+    R_CATS=$(jsonfilter -i "$TMP_IN" -e "@.categories" 2>/dev/null || true)
+    if [ -n "$R_CATS" ] && [ "$R_CATS" != "null" ]; then
+        SAFE_CATS=$(printf '%s' "$R_CATS" | tr -d '\r\n\\;`$&|><' | tr -d "'")
+        uci -q get network.awgit_settings >/dev/null 2>&1 || uci set network.awgit_settings=awgit
+        uci set network.awgit_settings.categories="$SAFE_CATS"
+        uci commit network
+    fi
+
     RESTORED=0
     idx=0
     while true; do
@@ -537,6 +708,9 @@ if [ "$ACTION" = "restore" ]; then
         R_PRIV=$(jsonfilter -i "$TMP_IN" -e "@.peers[$idx].private_key" 2>/dev/null)
         R_IP=$(jsonfilter -i "$TMP_IN" -e "@.peers[$idx].allowed_ips" 2>/dev/null)
         R_DIS=$(jsonfilter -i "$TMP_IN" -e "@.peers[$idx].disabled" 2>/dev/null)
+        R_GROUP=$(jsonfilter -i "$TMP_IN" -e "@.peers[$idx].group" 2>/dev/null || true)
+        R_NOTES=$(jsonfilter -i "$TMP_IN" -e "@.peers[$idx].notes" 2>/dev/null || true)
+        R_CREATED=$(jsonfilter -i "$TMP_IN" -e "@.peers[$idx].created_at" 2>/dev/null || true)
 
         [ -z "$R_NAME" ] && R_NAME="Client-$idx"
         R_NAME=$(sanitize_name "$R_NAME")
@@ -557,6 +731,9 @@ if [ "$ACTION" = "restore" ]; then
                 uci set network.${SEC}.allowed_ips="$R_IP"
                 uci set network.${SEC}.persistent_keepalive="25"
                 uci set network.${SEC}.disabled="$R_DIS"
+                [ -n "$R_GROUP" ] && [ "$R_GROUP" != "null" ] && uci set network.${SEC}.group="$R_GROUP"
+                [ -n "$R_NOTES" ] && [ "$R_NOTES" != "null" ] && uci set network.${SEC}.notes="$R_NOTES"
+                [ -n "$R_CREATED" ] && [ "$R_CREATED" != "null" ] && uci set network.${SEC}.created_at="$R_CREATED"
                 uci commit network
 
                 if [ "$R_DIS" != "1" ]; then

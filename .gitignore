@@ -8,7 +8,7 @@ docs/CHRONICLE*.md
 awgit-backup-*.json
 
 # Screenshots & sensitive media
-*.png
+# *.png
 !src/assets/banner.png
 ui_screenshot.png
 

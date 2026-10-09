@@ -5,6 +5,14 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/kobaltgit/AwgIt/releases"><img src="https://img.shields.io/badge/%D1%80%D0%B5%D0%BB%D0%B8%D0%B7-v0.1.0-blue.svg" alt="Релиз v0.1.0"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/%D0%9B%D0%B8%D1%86%D0%B5%D0%BD%D0%B7%D0%B8%D1%8F-MIT-yellow.svg" alt="Лицензия: MIT"></a>
+  <a href="https://github.com/kobaltgit/AwgIt/actions/workflows/release.yml"><img src="https://github.com/kobaltgit/AwgIt/actions/workflows/release.yml/badge.svg" alt="Тесты и Релизы"></a>
+  <img src="https://img.shields.io/badge/OpenWrt-21.02%20%7C%2022.03%20%7C%2023.05-brightgreen.svg" alt="Поддержка OpenWrt">
+  <img src="https://img.shields.io/badge/%D0%9F%D0%B0%D0%BC%D1%8F%D1%82%D1%8C%20(RAM)-0%25%20(%D0%91%D0%B5%D0%B7%20%D0%B4%D0%B5%D0%BC%D0%BE%D0%BD%D0%BE%D0%B2)-success.svg" alt="0% нагрузки">
+</p>
+
+<p align="center">
   <strong>Ультралегковесный веб-интерфейс управления клиентами AmneziaWG прямо на роутере OpenWrt.</strong><br>
   <em>Нулевые накладные расходы • Без Docker • Генерация QR-кодов и .conf в 1 клик • Тёмная тема в стиле wg-easy</em>
 </p>
@@ -67,3 +75,9 @@ wget -qO- https://raw.githubusercontent.com/kobaltgit/AwgIt/main/src/install.sh 
 ```
 
 После завершения панель управления доступна по адресу: **`http://<IP_РОУТЕРА>/awg`** (например, `http://192.168.1.1/awg`).
+
+---
+
+## 📄 Лицензия
+
+Проект распространяется под свободной лицензией MIT — подробности в файле [LICENSE](LICENSE).

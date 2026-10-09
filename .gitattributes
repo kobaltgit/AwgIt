@@ -1,0 +1,7 @@
+# Ensure shell scripts always use LF line endings across all platforms
+*.sh text eol=lf
+src/awg-api text eol=lf
+tests/*.sh text eol=lf
+
+# Default git attributes
+* text=auto

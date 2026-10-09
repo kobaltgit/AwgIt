@@ -1,0 +1,91 @@
+name: 'Tests & Release'
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: 'Run Shell & Syntax Tests'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y busybox shellcheck dos2unix
+
+      - name: Check line endings
+        run: |
+          dos2unix -k -q src/awg-api src/install.sh tests/*.sh
+
+      - name: Shell syntax check (sh -n)
+        run: |
+          sh -n src/awg-api
+          sh -n src/install.sh
+          sh -n tests/test_input_validation.sh
+          sh -n tests/test_cgi_mock.sh
+
+      - name: Run input validation tests in BusyBox ash
+        run: |
+          busybox sh tests/test_input_validation.sh
+
+      - name: Run mock CGI tests in BusyBox ash
+        run: |
+          busybox sh tests/test_cgi_mock.sh
+
+  release:
+    name: 'Create GitHub Release'
+    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Tarball Artifact
+        run: |
+          mkdir -p dist
+          tar -czf dist/awgit-${{ github.ref_name }}.tar.gz -C src awg-api index.html qrcode.min.js install.sh install.ps1 assets/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: 'AwgIt ${{ github.ref_name }}'
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            dist/awgit-${{ github.ref_name }}.tar.gz
+            src/install.sh
+            src/install.ps1
+          body: |
+            ## 🚀 AwgIt ${{ github.ref_name }}
+            
+            Ultra-lightweight AmneziaWG client web manager running directly on OpenWrt routers.
+            
+            ### 📦 Quick Install:
+            ```sh
+            wget -qO- https://raw.githubusercontent.com/kobaltgit/AwgIt/${{ github.ref_name }}/src/install.sh | sh
+            ```
+            *(Для установки с русскими логами: `wget -qO- https://raw.githubusercontent.com/kobaltgit/AwgIt/${{ github.ref_name }}/src/install.sh | sh -s -- --lang ru`)*
+            
+            ### ✨ Highlights in this release:
+            - **Zero-Daemon Architecture:** 0% CPU & RAM overhead in standby via POSIX CGI (`uhttpd`).
+            - **Hardened Security:** Base64 public key validation, strict client name sanitization, CIDR IPv4 checking.
+            - **AmneziaWG Obfuscation:** Full support for `Jc`, `Jmin`, `Jmax`, `S1`, `S2`, `H1-H4` obfuscation parameters.
+            - **Responsive UI:** Dark theme, real-time SVG sparkline, glowing session indicators, CSS Grid 3-tier mobile view.
+            - **Automated Tests:** Comprehensive BusyBox `ash` test suite for CGI handlers and configuration generators.
+            - **Open Source:** Released under the MIT License.

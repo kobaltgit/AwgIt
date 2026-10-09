@@ -5,6 +5,14 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/kobaltgit/AwgIt/releases"><img src="https://img.shields.io/badge/release-v0.1.0-blue.svg" alt="Release v0.1.0"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://github.com/kobaltgit/AwgIt/actions/workflows/release.yml"><img src="https://github.com/kobaltgit/AwgIt/actions/workflows/release.yml/badge.svg" alt="Tests & Release"></a>
+  <img src="https://img.shields.io/badge/OpenWrt-21.02%20%7C%2022.03%20%7C%2023.05-brightgreen.svg" alt="OpenWrt Support">
+  <img src="https://img.shields.io/badge/RAM%20Overhead-0%25%20(Zero--Daemon)-success.svg" alt="Zero-Daemon Overhead">
+</p>
+
+<p align="center">
   <strong>Ultra-lightweight AmneziaWG client web manager running directly on your OpenWrt router.</strong><br>
   <em>Zero overhead • No Docker required • 1-Click QR codes & .conf generation • Sleek dark UI inspired by wg-easy</em>
 </p>
@@ -68,3 +76,9 @@ wget -qO- https://raw.githubusercontent.com/kobaltgit/AwgIt/main/src/install.sh 
 ```
 
 Once installed, the control panel is ready at: **`http://<ROUTER_IP>/awg`** (e.g. `http://192.168.1.1/awg`).
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

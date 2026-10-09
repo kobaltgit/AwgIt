@@ -17,9 +17,50 @@ WG_IF="awg0"
 WG_BIN="/usr/bin/amneziawg"
 [ -x "$WG_BIN" ] || WG_BIN="/usr/bin/awg"
 
-# Helper: URL decode
+# Helper: URL decode (pure POSIX / BusyBox ash compatible)
 urldecode() {
-    printf '%b' "${1//%/\\x}" 2>/dev/null || printf '%s' "$1"
+    [ -z "$1" ] && return 0
+    printf '%b' "$(printf '%s' "$1" | sed 's/+/ /g; s/%\([0-9a-fA-F][0-9a-fA-F]\)/\\x\1/g')" 2>/dev/null || printf '%s' "$1"
+}
+
+# Helper: validate WireGuard / AmneziaWG base64 key (44 chars ending in =)
+is_valid_key() {
+    [ -z "$1" ] && return 1
+    case "$1" in
+        *[!A-Za-z0-9+/=]*) return 1 ;;
+    esac
+    [ "${#1}" -eq 44 ] || return 1
+    return 0
+}
+
+# Helper: sanitize client name (keep only alphanumeric, dash, underscore, dot, space; max 64 chars)
+sanitize_name() {
+    printf '%s' "$1" | sed 's/[^a-zA-Z0-9._ -]//g' | cut -c 1-64
+}
+
+# Helper: validate IPv4 address with optional CIDR
+is_valid_cidr() {
+    _ip="$1"
+    [ -z "$_ip" ] && return 1
+    case "$_ip" in
+        *[!0-9./]*) return 1 ;;
+    esac
+    _ip_part="${_ip%%/*}"
+    _cidr_part="${_ip#*/}"
+    [ "$_ip_part" = "$_cidr_part" ] && _cidr_part="32"
+
+    _o1=$(printf '%s' "$_ip_part" | cut -d '.' -f 1)
+    _o2=$(printf '%s' "$_ip_part" | cut -d '.' -f 2)
+    _o3=$(printf '%s' "$_ip_part" | cut -d '.' -f 3)
+    _o4=$(printf '%s' "$_ip_part" | cut -d '.' -f 4)
+
+    [ -n "$_o1" ] && [ -n "$_o2" ] && [ -n "$_o3" ] && [ -n "$_o4" ] || return 1
+    [ "$_o1" -ge 0 ] 2>/dev/null && [ "$_o1" -le 255 ] || return 1
+    [ "$_o2" -ge 0 ] 2>/dev/null && [ "$_o2" -le 255 ] || return 1
+    [ "$_o3" -ge 0 ] 2>/dev/null && [ "$_o3" -le 255 ] || return 1
+    [ "$_o4" -ge 0 ] 2>/dev/null && [ "$_o4" -le 255 ] || return 1
+    [ "$_cidr_part" -ge 0 ] 2>/dev/null && [ "$_cidr_part" -le 32 ] || return 1
+    return 0
 }
 
 # Helper: parse query / body
@@ -174,6 +215,11 @@ if [ "$ACTION" = "client_config" ]; then
     TARGET_PUB=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^public_key=' | head -n 1 | cut -d '=' -f 2)
     TARGET_PUB=$(urldecode "$TARGET_PUB")
 
+    if ! is_valid_key "$TARGET_PUB"; then
+        printf '{"status":"error","message":"Invalid public_key format"}\n'
+        exit 0
+    fi
+
     SECTIONS=$(uci show network | grep '=amneziawg_awg0' | cut -d '.' -f 2 | cut -d '=' -f 1)
     for SEC in $SECTIONS; do
         PUB=$(uci -q get network.${SEC}.public_key)
@@ -210,7 +256,10 @@ fi
 if [ "$ACTION" = "regen_keys" ]; then
     TARGET_PUB=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^public_key=' | head -n 1 | cut -d '=' -f 2)
     TARGET_PUB=$(urldecode "$TARGET_PUB")
-    [ -z "$TARGET_PUB" ] && { printf '{"status":"error","message":"Missing public_key"}\n'; exit 0; }
+    if ! is_valid_key "$TARGET_PUB"; then
+        printf '{"status":"error","message":"Invalid or missing public_key"}\n'
+        exit 0
+    fi
 
     SECTIONS=$(uci show network | grep '=amneziawg_awg0' | cut -d '.' -f 2 | cut -d '=' -f 1)
     FOUND=0
@@ -259,7 +308,7 @@ fi
 if [ "$ACTION" = "create" ]; then
     RAW_NAME=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^name=' | head -n 1 | cut -d '=' -f 2)
     NAME=$(urldecode "$RAW_NAME")
-    NAME=$(printf '%s' "$NAME" | tr -d "'\"\`\$\\;\n\r" | head -c 64)
+    NAME=$(sanitize_name "$NAME")
     [ -z "$NAME" ] && NAME="Client-$NOW"
 
     PRIV_KEY=$($WG_BIN genkey)
@@ -273,6 +322,10 @@ if [ "$ACTION" = "create" ]; then
         fi
     done
     NEXT_IP=$((MAX_IP + 1))
+    if [ "$NEXT_IP" -gt 254 ]; then
+        printf '{"status":"error","message":"IP pool 10.9.0.0/24 exhausted"}\n'
+        exit 0
+    fi
     CLIENT_IP="10.9.0.${NEXT_IP}"
 
     SEC_NAME=$(uci add network amneziawg_awg0)
@@ -309,7 +362,10 @@ if [ "$ACTION" = "delete" ]; then
     TARGET_PUB=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^public_key=' | head -n 1 | cut -d '=' -f 2)
     TARGET_PUB=$(urldecode "$TARGET_PUB")
 
-    [ -z "$TARGET_PUB" ] && { printf '{"status":"error","message":"Missing public_key"}\n'; exit 0; }
+    if ! is_valid_key "$TARGET_PUB"; then
+        printf '{"status":"error","message":"Invalid or missing public_key"}\n'
+        exit 0
+    fi
 
     SECTIONS=$(uci show network | grep '=amneziawg_awg0' | cut -d '.' -f 2 | cut -d '=' -f 1)
     FOUND=0
@@ -338,6 +394,12 @@ if [ "$ACTION" = "toggle" ]; then
     TARGET_PUB=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^public_key=' | head -n 1 | cut -d '=' -f 2)
     TARGET_PUB=$(urldecode "$TARGET_PUB")
     STATE=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^disabled=' | head -n 1 | cut -d '=' -f 2)
+    [ "$STATE" = "1" ] || STATE="0"
+
+    if ! is_valid_key "$TARGET_PUB"; then
+        printf '{"status":"error","message":"Invalid or missing public_key"}\n'
+        exit 0
+    fi
 
     SECTIONS=$(uci show network | grep '=amneziawg_awg0' | cut -d '.' -f 2 | cut -d '=' -f 1)
     for SEC in $SECTIONS; do
@@ -369,12 +431,20 @@ if [ "$ACTION" = "update" ]; then
     TARGET_PUB=$(urldecode "$TARGET_PUB")
     RAW_NAME=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^name=' | head -n 1 | cut -d '=' -f 2)
     NEW_NAME=$(urldecode "$RAW_NAME")
-    NEW_NAME=$(printf '%s' "$NEW_NAME" | tr -d "'\"\`\$\\;\n\r" | head -c 64)
+    NEW_NAME=$(sanitize_name "$NEW_NAME")
 
     RAW_IP=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^allowed_ips=' | head -n 1 | cut -d '=' -f 2)
     NEW_IP=$(urldecode "$RAW_IP")
 
-    [ -z "$TARGET_PUB" ] && { printf '{"status":"error","message":"Missing public_key"}\n'; exit 0; }
+    if ! is_valid_key "$TARGET_PUB"; then
+        printf '{"status":"error","message":"Invalid or missing public_key"}\n'
+        exit 0
+    fi
+
+    if [ -n "$NEW_IP" ] && ! is_valid_cidr "$NEW_IP"; then
+        printf '{"status":"error","message":"Invalid allowed_ips format"}\n'
+        exit 0
+    fi
 
     SECTIONS=$(uci show network | grep '=amneziawg_awg0' | cut -d '.' -f 2 | cut -d '=' -f 1)
     FOUND=0
@@ -469,9 +539,14 @@ if [ "$ACTION" = "restore" ]; then
         R_DIS=$(jsonfilter -i "$TMP_IN" -e "@.peers[$idx].disabled" 2>/dev/null)
 
         [ -z "$R_NAME" ] && R_NAME="Client-$idx"
+        R_NAME=$(sanitize_name "$R_NAME")
         [ -z "$R_DIS" ] && R_DIS="0"
+        [ "$R_DIS" = "1" ] || R_DIS="0"
 
-        if [ -n "$R_PUB" ] && [ -n "$R_IP" ]; then
+        if [ -n "$R_PUB" ] && [ -n "$R_IP" ] && is_valid_key "$R_PUB" && is_valid_cidr "$R_IP"; then
+            if [ -n "$R_PRIV" ] && ! is_valid_key "$R_PRIV"; then
+                R_PRIV=""
+            fi
             # Check if peer already exists by public_key
             EXISTS=$(uci show network | grep -F "public_key='${R_PUB}'" || true)
             if [ -z "$EXISTS" ]; then

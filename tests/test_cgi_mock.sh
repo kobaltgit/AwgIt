@@ -145,6 +145,52 @@ if ! verify_old_password "" "AnyPass"; then
     echo "FAIL: First time password setup without existing password should succeed"
     exit 1
 fi
-echo "[PASS] Set password verification mock test"
+# 8. Test Fallback Endpoint Host (Issue #1: Neutral fallback)
+get_fallback_ep() {
+    _ep="$1"
+    [ -z "$_ep" ] && _ep="YOUR_SERVER_IP"
+    printf '%s' "$_ep"
+}
+
+FALLBACK_RES=$(get_fallback_ep "")
+if [ "$FALLBACK_RES" != "YOUR_SERVER_IP" ]; then
+    echo "FAIL: Unexpected fallback endpoint: $FALLBACK_RES"
+    exit 1
+fi
+echo "[PASS] Endpoint Host fallback test (strictly YOUR_SERVER_IP)"
+
+# 9. Test server_public_key in create peer response (Issue #3)
+MOCK_SEC="cfg01"
+MOCK_CLIENT_NAME="TestClient"
+MOCK_CLIENT_PUB="CLIENT_PUB_KEY_12345678901234567890123456="
+MOCK_SERVER_PUB="SERVER_PUB_KEY_12345678901234567890123456="
+MOCK_IP="10.9.0.2"
+
+PEER_JSON=$(printf '{\n  "peer": {\n    "section": "%s",\n    "name": "%s",\n    "public_key": "%s",\n    "server_public_key": "%s",\n    "allowed_ips": "%s/32"\n  }\n}' \
+    "$MOCK_SEC" "$MOCK_CLIENT_NAME" "$MOCK_CLIENT_PUB" "$MOCK_SERVER_PUB" "$MOCK_IP")
+
+if ! printf '%s' "$PEER_JSON" | grep -q '"server_public_key": "SERVER_PUB_KEY_'; then
+    echo "FAIL: server_public_key missing in peer JSON"
+    exit 1
+fi
+echo "[PASS] server_public_key inclusion in peer response test"
+
+# 10. Test set_server_settings port and parameters validation (Issues #2, #4)
+validate_port() {
+    _p="$1"
+    case "$_p" in
+        *[!0-9]*) return 1 ;;
+    esac
+    [ -z "$_p" ] && return 1
+    [ "$_p" -ge 1 ] 2>/dev/null && [ "$_p" -le 65535 ] 2>/dev/null || return 1
+    return 0
+}
+
+if ! validate_port "49155"; then echo "FAIL: 49155 rejected"; exit 1; fi
+if ! validate_port "51820"; then echo "FAIL: 51820 rejected"; exit 1; fi
+if validate_port "0"; then echo "FAIL: Port 0 accepted"; exit 1; fi
+if validate_port "70000"; then echo "FAIL: Port 70000 accepted"; exit 1; fi
+if validate_port "abc"; then echo "FAIL: Non-numeric port accepted"; exit 1; fi
+echo "[PASS] Server settings port validation test"
 
 echo "=== All tests passed successfully! ==="

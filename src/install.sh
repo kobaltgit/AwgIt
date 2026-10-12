@@ -14,6 +14,8 @@ REPO_RAW_URL="${REPO_RAW_URL:-https://raw.githubusercontent.com/kobaltgit/AwgIt/
 ROUTER_IP="192.168.1.1"
 INSTALL_LANG="en"
 CUSTOM_IP=0
+ENDPOINT_HOST=""
+LISTEN_PORT=""
 
 # Parse arguments
 while [ $# -gt 0 ]; do
@@ -26,12 +28,28 @@ while [ $# -gt 0 ]; do
             INSTALL_LANG="${1#*=}"
             shift
             ;;
+        --endpoint|-e)
+            ENDPOINT_HOST="$2"
+            shift 2
+            ;;
+        --endpoint=*)
+            ENDPOINT_HOST="${1#*=}"
+            shift
+            ;;
+        --port|-p)
+            LISTEN_PORT="$2"
+            shift 2
+            ;;
+        --port=*)
+            LISTEN_PORT="${1#*=}"
+            shift
+            ;;
         ru|en)
             INSTALL_LANG="$1"
             shift
             ;;
         -h|--help)
-            echo "Usage: $0 [ROUTER_IP] [--lang en|ru]"
+            echo "Usage: $0 [ROUTER_IP] [--lang en|ru] [--endpoint IP_OR_DOMAIN] [--port PORT]"
             exit 0
             ;;
         *)
@@ -118,8 +136,41 @@ if [ -f /etc/openwrt_release ] || [ "$ROUTER_IP" = "localhost" ] || [ "$ROUTER_I
             "ВНИМАНИЕ: Утилита awg не найдена. Убедитесь, что установлены пакеты kmod-amneziawg и amneziawg-tools!"
     fi
 
-    msg "5. Reloading uhttpd web server..." \
-        "5. Перезапуск веб-сервера uhttpd..."
+    msg "5. Checking network and endpoint configuration..." \
+        "5. Проверка сетевых настроек и внешнего хоста..."
+    if [ -z "$ENDPOINT_HOST" ]; then
+        EXISTING_EP=$(uci -q get network.awg0.endpoint_host || uci -q get network.awgit_settings.endpoint_host || true)
+        if [ -z "$EXISTING_EP" ] && [ -t 0 ] && [ -e /dev/tty ]; then
+            echo ""
+            msg "Enter public IP or domain for clients (or press Enter to set later in Web UI):" \
+                "Введите внешний IP или DDNS-домен для клиентов (или нажмите Enter для настройки позже в веб-панели):"
+            read -r USER_EP </dev/tty || true
+            ENDPOINT_HOST=$(printf '%s' "$USER_EP" | tr -d '\r\n\\;`$&|>< '"'")
+        fi
+    fi
+
+    if [ -n "$ENDPOINT_HOST" ]; then
+        if uci -q get network.awg0 >/dev/null 2>&1; then
+            uci set network.awg0.endpoint_host="$ENDPOINT_HOST"
+        fi
+        uci -q get network.awgit_settings >/dev/null 2>&1 || uci set network.awgit_settings=awgit
+        uci set network.awgit_settings.endpoint_host="$ENDPOINT_HOST"
+        uci commit network
+        msg "   Configured endpoint_host: $ENDPOINT_HOST" \
+            "   Установлен endpoint_host: $ENDPOINT_HOST"
+    fi
+
+    if [ -n "$LISTEN_PORT" ]; then
+        if uci -q get network.awg0 >/dev/null 2>&1; then
+            uci set network.awg0.listen_port="$LISTEN_PORT"
+            uci commit network
+            msg "   Configured listen_port: $LISTEN_PORT" \
+                "   Установлен listen_port: $LISTEN_PORT"
+        fi
+    fi
+
+    msg "6. Reloading uhttpd web server..." \
+        "6. Перезапуск веб-сервера uhttpd..."
     /etc/init.d/uhttpd reload >/dev/null 2>&1 || true
 
     echo ""
@@ -127,6 +178,8 @@ if [ -f /etc/openwrt_release ] || [ "$ROUTER_IP" = "localhost" ] || [ "$ROUTER_I
         "=== Установка успешно завершена! ==="
     msg "Control panel is available at: http://127.0.0.1/awg or http://<router_ip>/awg" \
         "Панель управления доступна по адресу: http://127.0.0.1/awg или http://<IP_роутера>/awg"
+    msg "Tip: You can configure Endpoint Host and Listen Port in Settings tab." \
+        "Совет: Вы можете настроить Endpoint Host и порт во вкладке Настройки."
     exit 0
 fi
 
@@ -200,8 +253,29 @@ fi
 /etc/init.d/uhttpd reload >/dev/null 2>&1 || true
 "
 
-msg "7. Testing API response..." \
-    "7. Тест отклика API..."
+msg "7. Configuring router network settings..." \
+    "7. Настройка параметров сети на роутере..."
+if [ -n "$ENDPOINT_HOST" ]; then
+    ssh -o StrictHostKeyChecking=no "root@${ROUTER_IP}" "
+        if uci -q get network.awg0 >/dev/null 2>&1; then
+            uci set network.awg0.endpoint_host='${ENDPOINT_HOST}'
+        fi
+        uci -q get network.awgit_settings >/dev/null 2>&1 || uci set network.awgit_settings=awgit
+        uci set network.awgit_settings.endpoint_host='${ENDPOINT_HOST}'
+        uci commit network
+    "
+fi
+if [ -n "$LISTEN_PORT" ]; then
+    ssh -o StrictHostKeyChecking=no "root@${ROUTER_IP}" "
+        if uci -q get network.awg0 >/dev/null 2>&1; then
+            uci set network.awg0.listen_port='${LISTEN_PORT}'
+            uci commit network
+        fi
+    "
+fi
+
+msg "8. Testing API response..." \
+    "8. Тест отклика API..."
 ssh -o StrictHostKeyChecking=no "root@${ROUTER_IP}" "
 if command -v curl >/dev/null 2>&1; then
     curl -s http://127.0.0.1/cgi-bin/awg-api?action=status | head -n 3
@@ -213,3 +287,5 @@ msg "=== Installation successfully completed! ===" \
     "=== Установка успешно завершена! ==="
 msg "Control panel is available at: http://${ROUTER_IP}/awg" \
     "Панель управления доступна по адресу: http://${ROUTER_IP}/awg"
+msg "Tip: You can configure Endpoint Host and Listen Port in Settings tab." \
+    "Совет: Вы можете настроить Endpoint Host и порт во вкладке Настройки."

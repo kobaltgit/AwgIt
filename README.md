@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/kobaltgit/AwgIt/releases"><img src="https://img.shields.io/badge/release-v0.2.0-blue.svg" alt="Release v0.2.0"></a>
+  <a href="https://github.com/kobaltgit/AwgIt/releases"><img src="https://img.shields.io/badge/release-v0.2.1-blue.svg" alt="Release v0.2.1"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
   <a href="https://github.com/kobaltgit/AwgIt/actions/workflows/release.yml"><img src="https://github.com/kobaltgit/AwgIt/actions/workflows/release.yml/badge.svg" alt="Tests & Release"></a>
   <img src="https://img.shields.io/badge/OpenWrt-21.02%20%7C%2022.03%20%7C%2023.05-brightgreen.svg" alt="OpenWrt Support">

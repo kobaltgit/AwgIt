@@ -205,8 +205,9 @@ H2=$(uci -q get network.${WG_IF}.awg_h2 || echo "2")
 H3=$(uci -q get network.${WG_IF}.awg_h3 || echo "3")
 H4=$(uci -q get network.${WG_IF}.awg_h4 || echo "4")
 
-EXT_IP=$(uci -q get network.${WG_IF}.endpoint_host)
-[ -z "$EXT_IP" ] && EXT_IP="62.16.41.168"
+EXT_IP=$(uci -q get network.${WG_IF}.endpoint_host || true)
+[ -z "$EXT_IP" ] && EXT_IP=$(uci -q get network.awgit_settings.endpoint_host || true)
+[ -z "$EXT_IP" ] && EXT_IP="YOUR_SERVER_IP"
 
 NOW=$(date +%s)
 
@@ -217,6 +218,107 @@ generate_conf() {
     printf "[Interface]\nAddress = %s\nPrivateKey = %s\nDNS = 10.9.0.1, 77.88.8.8\nJc = %s\nJmin = %s\nJmax = %s\nS1 = %s\nS2 = %s\nH1 = %s\nH2 = %s\nH3 = %s\nH4 = %s\n\n[Peer]\nPublicKey = %s\nEndpoint = %s:%s\nAllowedIPs = 0.0.0.0/0\nPersistentKeepalive = 25\n" \
         "$_client_ip" "$_client_priv" "$JC" "$JMIN" "$JMAX" "$S1" "$S2" "$H1" "$H2" "$H3" "$H4" "$SERVER_PUB" "$EXT_IP" "$SERVER_PORT"
 }
+
+# ==========================================================
+# ACTION: SET SERVER SETTINGS (ENDPOINT, PORT, AWG PARAMS)
+# ==========================================================
+if [ "$ACTION" = "set_server_settings" ]; then
+    RAW_EP=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^endpoint_host=' | head -n 1 | cut -d '=' -f 2)
+    NEW_EP=$(urldecode "$RAW_EP")
+    NEW_EP=$(printf '%s' "$NEW_EP" | tr -d '\r\n\\;`$&|>< '"'")
+
+    RAW_PORT=$(printf '%s' "$QUERY" | tr '&' '\n' | grep '^listen_port=' | head -n 1 | cut -d '=' -f 2)
+    NEW_PORT=$(urldecode "$RAW_PORT")
+    case "$NEW_PORT" in
+        *[!0-9]*) NEW_PORT="" ;;
+    esac
+    if [ -n "$NEW_PORT" ]; then
+        if [ "$NEW_PORT" -lt 1 ] 2>/dev/null || [ "$NEW_PORT" -gt 65535 ] 2>/dev/null; then
+            printf '{"status":"error","message":"Invalid listen_port (1-65535)"}\n'
+            exit 0
+        fi
+    fi
+
+    parse_uint() {
+        _v=$(printf '%s' "$QUERY" | tr '&' '\n' | grep "^$1=" | head -n 1 | cut -d '=' -f 2)
+        _v=$(urldecode "$_v")
+        case "$_v" in
+            *[!0-9]*) echo "" ;;
+            *) echo "$_v" ;;
+        esac
+    }
+
+    NEW_JC=$(parse_uint "jc")
+    NEW_JMIN=$(parse_uint "jmin")
+    NEW_JMAX=$(parse_uint "jmax")
+    NEW_S1=$(parse_uint "s1")
+    NEW_S2=$(parse_uint "s2")
+    NEW_H1=$(parse_uint "h1")
+    NEW_H2=$(parse_uint "h2")
+    NEW_H3=$(parse_uint "h3")
+    NEW_H4=$(parse_uint "h4")
+
+    if [ -n "$NEW_JMIN" ] && [ -n "$NEW_JMAX" ]; then
+        if [ "$NEW_JMIN" -gt "$NEW_JMAX" ] 2>/dev/null; then
+            printf '{"status":"error","message":"Jmin cannot be greater than Jmax"}\n'
+            exit 0
+        fi
+    fi
+
+    NEEDS_RELOAD=0
+
+    if printf '%s' "$QUERY" | grep -q 'endpoint_host='; then
+        if uci -q get network.${WG_IF} >/dev/null 2>&1; then
+            if [ -n "$NEW_EP" ] && [ "$NEW_EP" != "YOUR_SERVER_IP" ]; then
+                uci set network.${WG_IF}.endpoint_host="$NEW_EP"
+            else
+                uci -q delete network.${WG_IF}.endpoint_host || true
+            fi
+        fi
+        uci -q get network.awgit_settings >/dev/null 2>&1 || uci set network.awgit_settings=awgit
+        if [ -n "$NEW_EP" ] && [ "$NEW_EP" != "YOUR_SERVER_IP" ]; then
+            uci set network.awgit_settings.endpoint_host="$NEW_EP"
+        else
+            uci -q delete network.awgit_settings.endpoint_host || true
+        fi
+    fi
+
+    if [ -n "$NEW_PORT" ] && [ "$NEW_PORT" != "$SERVER_PORT" ]; then
+        uci -q get network.${WG_IF} >/dev/null 2>&1 && uci set network.${WG_IF}.listen_port="$NEW_PORT"
+        NEEDS_RELOAD=1
+    fi
+
+    check_and_set_awg() {
+        _param="$1"
+        _new="$2"
+        _curr="$3"
+        if [ -n "$_new" ] && [ "$_new" != "$_curr" ]; then
+            uci -q get network.${WG_IF} >/dev/null 2>&1 && uci set network.${WG_IF}.${_param}="$_new"
+            NEEDS_RELOAD=1
+        fi
+    }
+
+    check_and_set_awg "awg_jc" "$NEW_JC" "$JC"
+    check_and_set_awg "awg_jmin" "$NEW_JMIN" "$JMIN"
+    check_and_set_awg "awg_jmax" "$NEW_JMAX" "$JMAX"
+    check_and_set_awg "awg_s1" "$NEW_S1" "$S1"
+    check_and_set_awg "awg_s2" "$NEW_S2" "$S2"
+    check_and_set_awg "awg_h1" "$NEW_H1" "$H1"
+    check_and_set_awg "awg_h2" "$NEW_H2" "$H2"
+    check_and_set_awg "awg_h3" "$NEW_H3" "$H3"
+    check_and_set_awg "awg_h4" "$NEW_H4" "$H4"
+
+    uci commit network
+
+    if [ "$NEEDS_RELOAD" -eq 1 ]; then
+        /sbin/ifup "$WG_IF" >/dev/null 2>&1 || true
+    fi
+
+    _reloaded_str="false"
+    [ "$NEEDS_RELOAD" -eq 1 ] && _reloaded_str="true"
+    printf '{"status":"ok","message":"Server settings updated","reloaded":%s}\n' "$_reloaded_str"
+    exit 0
+fi
 
 # ==========================================================
 # ACTION: STATUS / LIST
@@ -404,6 +506,7 @@ if [ "$ACTION" = "regen_keys" ]; then
             printf '  "status": "ok",\n'
             printf '  "name": "%s",\n' "$NAME"
             printf '  "public_key": "%s",\n' "$NEW_PUB"
+            printf '  "server_public_key": "%s",\n' "$SERVER_PUB"
             printf '  "config": "%s"\n' "$CONF_JSON"
             printf '}\n'
             exit 0
@@ -472,6 +575,7 @@ if [ "$ACTION" = "create" ]; then
     printf '    "section": "%s",\n' "$SEC_NAME"
     printf '    "name": "%s",\n' "$NAME"
     printf '    "public_key": "%s",\n' "$PUB_KEY"
+    printf '    "server_public_key": "%s",\n' "$SERVER_PUB"
     printf '    "allowed_ips": "%s/32",\n' "$CLIENT_IP"
     printf '    "group": "%s",\n' "$GROUP"
     printf '    "notes": "%s",\n' "$NOTES"

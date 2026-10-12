@@ -87,9 +87,11 @@ jobs:
             *(Для установки с русскими логами: `wget -qO- https://raw.githubusercontent.com/kobaltgit/AwgIt/${{ github.ref_name }}/src/install.sh | sh -s -- --lang ru`)*
             
             ### ✨ Highlights in this release:
-            - **Zero-Daemon Architecture:** 0% CPU & RAM overhead in standby via POSIX CGI (`uhttpd`).
-            - **Hardened Security:** Base64 public key validation, strict client name sanitization, CIDR IPv4 checking.
-            - **AmneziaWG Obfuscation:** Full support for `Jc`, `Jmin`, `Jmax`, `S1`, `S2`, `H1-H4` obfuscation parameters.
-            - **Responsive UI:** Dark theme, real-time SVG sparkline, glowing session indicators, CSS Grid 3-tier mobile view.
-            - **Automated Tests:** Comprehensive BusyBox `ash` test suite for CGI handlers and configuration generators.
-            - **Open Source:** Released under the MIT License.
+            - **Server Configuration UI:** Live editing of Endpoint Host, Listen Port, and AmneziaWG obfuscation parameters (`Jc`, `Jmin`, `Jmax`, `S1`, `S2`, `H1-H4`) from the Web UI.
+            - **Zero-Downtime Safe Reloads:** Modifying client endpoint hosts never resets the tunnel; interface reloads only occur on actual port or kernel parameter changes.
+            - **Safe Defaults:** Removed static endpoint fallbacks in favor of configurable `YOUR_SERVER_IP` placeholder.
+            - **Enhanced API:** `create` and `regen_keys` now expose `server_public_key` in JSON responses for seamless external provisioning.
+            - **High-Contrast QR Codes:** Guaranteed 16px quiet-zone white border for effortless scanning on all mobile cameras and OLED screens.
+            - **Installer Flags:** Full support for `--endpoint` and `--port` parameters in `install.sh` and `install.ps1`.
+            - **Local Dev Server:** Built-in standalone zero-dependency Node.js mock server (`tests/dev_server.js`) for instant browser previews.
+            - **Zero-Daemon Architecture:** 0% CPU & RAM overhead in standby on OpenWrt routers.

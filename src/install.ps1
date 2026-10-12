@@ -1,7 +1,9 @@
-param(
+﻿param(
     [string]$RouterIp = "192.168.1.1",
     [ValidateSet("en", "ru")]
     [string]$Lang = "en",
+    [string]$EndpointHost = "",
+    [string]$ListenPort = "",
     [string]$RepoRawUrl = "https://raw.githubusercontent.com/kobaltgit/AwgIt/main"
 )
 
@@ -57,12 +59,28 @@ try {
     scp -O -o StrictHostKeyChecking=no $srcApi "root@${RouterIp}:/www/cgi-bin/awg-api"
     ssh -o StrictHostKeyChecking=no "root@$RouterIp" "chmod +x /www/cgi-bin/awg-api"
 
-    Write-Host (Msg "4. Reloading uhttpd web server and checking permissions..." "4. Перезапуск веб-сервера uhttpd и проверка...") -ForegroundColor Yellow
+    if ($EndpointHost -or $ListenPort) {
+        Write-Host (Msg "4. Configuring router network settings..." "4. Настройка параметров сети на роутере...") -ForegroundColor Yellow
+        $uciCmds = @()
+        if ($EndpointHost) {
+            $uciCmds += "uci -q get network.awgit_settings >/dev/null 2>&1 || uci set network.awgit_settings=awgit; uci set network.awgit_settings.endpoint_host='$EndpointHost'"
+            $uciCmds += "uci -q get network.awg0 >/dev/null 2>&1 && uci set network.awg0.endpoint_host='$EndpointHost'"
+        }
+        if ($ListenPort) {
+            $uciCmds += "uci -q get network.awg0 >/dev/null 2>&1 && uci set network.awg0.listen_port='$ListenPort'"
+        }
+        $uciCmds += "uci commit network"
+        $combinedUci = $uciCmds -join "; "
+        ssh -o StrictHostKeyChecking=no "root@$RouterIp" "$combinedUci"
+    }
+
+    Write-Host (Msg "5. Reloading uhttpd web server and checking permissions..." "5. Перезапуск веб-сервера uhttpd и проверка...") -ForegroundColor Yellow
     ssh -o StrictHostKeyChecking=no "root@$RouterIp" "/etc/init.d/uhttpd reload; ls -la /www/awg /www/cgi-bin/awg-api"
 
     Write-Host ""
     Write-Host (Msg "=== Installation successfully completed! ===" "=== Установка успешно завершена! ===") -ForegroundColor Green
     Write-Host (Msg "Control panel is available at: http://$RouterIp/awg" "Панель управления доступна по адресу: http://$RouterIp/awg") -ForegroundColor Green
+    Write-Host (Msg "Tip: You can configure Endpoint Host and Listen Port in Settings tab." "Совет: Вы можете настроить Endpoint Host и порт во вкладке Настройки.") -ForegroundColor Cyan
 }
 finally {
     if ($tempDir -and (Test-Path $tempDir)) {

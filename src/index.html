@@ -215,7 +215,8 @@
     .modal-footer { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
 
     /* QR */
-    .qr-box { background: #fff; padding: 16px; border-radius: 12px; display: flex; justify-content: center; margin: 16px 0; }
+    .qr-box { background: #fff; padding: 16px; border-radius: 12px; display: flex; justify-content: center; align-items: center; margin: 16px 0; }
+    .qr-box canvas, .qr-box img { display: block; max-width: 100%; height: auto; }
     .conf-preview { background: var(--bg-body); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-family: monospace; font-size: 11px; color: #d4d4d8; max-height: 130px; overflow-y: auto; white-space: pre; margin-top: 8px; }
     [data-theme="light"] .conf-preview { color: #3f3f46; }
 
@@ -491,6 +492,75 @@
         <span class="panel-title" id="settingsTitle">Settings</span>
       </div>
       <div class="settings-grid">
+        <!-- Server Configuration -->
+        <div class="settings-card" id="cardServerConfig">
+          <div class="settings-title">
+            <span>🌐</span> <span id="setSecServer">Server Configuration</span>
+          </div>
+          <div class="settings-desc" id="setSecServerDesc">Configure endpoint host, listen port, and AmneziaWG obfuscation parameters.</div>
+          <div style="margin-top:14px; display:flex; flex-direction:column; gap:12px;">
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:12px;">
+              <div>
+                <label class="input-label" id="lblEndpointHost" style="margin-bottom:4px; font-size:12px;">Endpoint Host (IP / Domain)</label>
+                <input type="text" id="inputEndpointHost" class="input-text" placeholder="YOUR_SERVER_IP">
+              </div>
+              <div>
+                <label class="input-label" id="lblListenPort" style="margin-bottom:4px; font-size:12px;">Listen Port</label>
+                <input type="number" id="inputListenPort" class="input-text" placeholder="49155" min="1" max="65535">
+              </div>
+            </div>
+
+            <!-- AWG Obfuscation Grid -->
+            <div>
+              <div class="settings-label" id="lblAwgObfuscation" style="font-weight:600; font-size:13px; margin-bottom:4px;">AmneziaWG Obfuscation (Jc, Jmin, Jmax, S1, S2, H1-H4)</div>
+              <div class="settings-desc" id="descAwgObfuscation" style="margin-bottom:8px;">Junk packet counts, sizes, and header magic numbers for DPI circumvention.</div>
+              <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); gap:8px;">
+                <div>
+                  <label class="input-label" style="font-size:11px;">Jc</label>
+                  <input type="number" id="inputAwgJc" class="input-text" placeholder="4" min="0">
+                </div>
+                <div>
+                  <label class="input-label" style="font-size:11px;">Jmin</label>
+                  <input type="number" id="inputAwgJmin" class="input-text" placeholder="40" min="0">
+                </div>
+                <div>
+                  <label class="input-label" style="font-size:11px;">Jmax</label>
+                  <input type="number" id="inputAwgJmax" class="input-text" placeholder="70" min="0">
+                </div>
+                <div>
+                  <label class="input-label" style="font-size:11px;">S1</label>
+                  <input type="number" id="inputAwgS1" class="input-text" placeholder="15" min="0">
+                </div>
+                <div>
+                  <label class="input-label" style="font-size:11px;">S2</label>
+                  <input type="number" id="inputAwgS2" class="input-text" placeholder="32" min="0">
+                </div>
+                <div>
+                  <label class="input-label" style="font-size:11px;">H1</label>
+                  <input type="number" id="inputAwgH1" class="input-text" placeholder="1" min="0">
+                </div>
+                <div>
+                  <label class="input-label" style="font-size:11px;">H2</label>
+                  <input type="number" id="inputAwgH2" class="input-text" placeholder="2" min="0">
+                </div>
+                <div>
+                  <label class="input-label" style="font-size:11px;">H3</label>
+                  <input type="number" id="inputAwgH3" class="input-text" placeholder="3" min="0">
+                </div>
+                <div>
+                  <label class="input-label" style="font-size:11px;">H4</label>
+                  <input type="number" id="inputAwgH4" class="input-text" placeholder="4" min="0">
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex; gap:10px; align-items:center; margin-top:4px;">
+              <button class="btn btn-primary" id="btnSaveServerSettings" onclick="saveServerSettings()">Save Server Settings</button>
+              <span id="serverSettingsStatus" style="font-size:12px; color:var(--muted); display:none;"></span>
+            </div>
+          </div>
+        </div>
+
         <!-- Categories Management -->
         <div class="settings-card">
           <div class="settings-title">
@@ -886,6 +956,16 @@ const I18N = {
     noMatchingClients: 'No clients match your filter / search.',
     categoryExistsAlert: 'Category with this name already exists.',
     logout: 'Logout',
+    setSecServer: 'Server Configuration',
+    setSecServerDesc: 'Configure endpoint host, listen port, and AmneziaWG obfuscation parameters.',
+    lblEndpointHost: 'Endpoint Host (IP / Domain)',
+    lblListenPort: 'Listen Port',
+    lblAwgObfuscation: 'AmneziaWG Obfuscation (Jc, Jmin, Jmax, S1, S2, H1-H4)',
+    descAwgObfuscation: 'Junk packet counts, sizes, and header magic numbers for DPI circumvention.',
+    btnSaveServerSettings: 'Save Server Settings',
+    serverSettingsSavedAlert: 'Server settings saved successfully!',
+    serverSettingsReloadedAlert: 'Server settings saved and tunnel reloaded!',
+    invalidListenPortAlert: 'Please enter a valid listen port (1-65535).',
   },
   ru: {
     panelTitle: 'Клиенты',
@@ -1026,6 +1106,16 @@ const I18N = {
     noMatchingClients: 'Нет клиентов, соответствующих фильтрам / поиску.',
     categoryExistsAlert: 'Категория с таким именем уже существует.',
     logout: 'Выйти',
+    setSecServer: 'Параметры сервера AmneziaWG',
+    setSecServerDesc: 'Настройка внешнего хоста, порта прослушивания и параметров обфускации.',
+    lblEndpointHost: 'Внешний хост (IP или домен)',
+    lblListenPort: 'Порт прослушивания (Listen Port)',
+    lblAwgObfuscation: 'Параметры обфускации (Jc, Jmin, Jmax, S1, S2, H1-H4)',
+    descAwgObfuscation: 'Размеры и количество мусорных пакетов и заголовков для обхода DPI.',
+    btnSaveServerSettings: 'Сохранить настройки сервера',
+    serverSettingsSavedAlert: 'Настройки сервера успешно сохранены!',
+    serverSettingsReloadedAlert: 'Настройки сохранены, туннель перезапущен!',
+    invalidListenPortAlert: 'Укажите корректный порт прослушивания (1–65535).',
   }
 };
 
@@ -1105,6 +1195,13 @@ function setLang(lang) {
 
   // Settings
   setText('settingsTitle', t.settingsTitle);
+  setText('setSecServer', t.setSecServer);
+  setText('setSecServerDesc', t.setSecServerDesc);
+  setText('lblEndpointHost', t.lblEndpointHost);
+  setText('lblListenPort', t.lblListenPort);
+  setText('lblAwgObfuscation', t.lblAwgObfuscation);
+  setText('descAwgObfuscation', t.descAwgObfuscation);
+  setText('btnSaveServerSettings', t.btnSaveServerSettings);
   setText('setSecCategories', t.setSecCategories);
   setText('setSecCategoriesDesc', t.setSecCategoriesDesc);
   setText('btnAddCategoryLabel', t.btnAddCategoryLabel);
@@ -1239,6 +1336,7 @@ function switchTab(tab) {
   if (viewSettings) viewSettings.style.display = tab === 'settings' ? 'block' : 'none';
 
   if (tab === 'settings') {
+    renderServerSettings();
     renderSettingsCategories();
   }
 }
@@ -1528,6 +1626,7 @@ function renderPeerList(data) {
   if (s) {
     document.getElementById('serverInfo').innerHTML =
       `<span>${escapeHtml(s.interface)}</span> • <span>:${escapeHtml(s.listen_port)}</span><span class="server-sep-ep"> • </span><span class="server-ep">${escapeHtml(s.endpoint)}</span>`;
+    if (activeTab === 'settings') renderServerSettings();
   }
 
   updateOverviewMetrics(data.peers || []);
@@ -1685,6 +1784,95 @@ function updateCategoryDropdowns() {
     const curVal = eSelect.value;
     eSelect.innerHTML = opts.join('');
     eSelect.value = curVal;
+  }
+}
+
+function renderServerSettings() {
+  if (!lastClientsData || !lastClientsData.server) return;
+  const s = lastClientsData.server;
+  const epHostInput = document.getElementById('inputEndpointHost');
+  const portInput = document.getElementById('inputListenPort');
+  if (epHostInput && document.activeElement !== epHostInput) {
+    let ep = s.endpoint || '';
+    if (ep.includes(':')) {
+      ep = ep.substring(0, ep.lastIndexOf(':'));
+    }
+    epHostInput.value = (ep === 'YOUR_SERVER_IP') ? '' : ep;
+  }
+  if (portInput && document.activeElement !== portInput) {
+    portInput.value = s.listen_port || '49155';
+  }
+  const p = s.awg_params || {};
+  const setAwgVal = (id, val) => {
+    const el = document.getElementById(id);
+    if (el && document.activeElement !== el) el.value = val != null ? val : '';
+  };
+  setAwgVal('inputAwgJc', p.jc);
+  setAwgVal('inputAwgJmin', p.jmin);
+  setAwgVal('inputAwgJmax', p.jmax);
+  setAwgVal('inputAwgS1', p.s1);
+  setAwgVal('inputAwgS2', p.s2);
+  setAwgVal('inputAwgH1', p.h1);
+  setAwgVal('inputAwgH2', p.h2);
+  setAwgVal('inputAwgH3', p.h3);
+  setAwgVal('inputAwgH4', p.h4);
+}
+
+async function saveServerSettings() {
+  const t = I18N[currentLang];
+  const btn = document.getElementById('btnSaveServerSettings');
+  const statusEl = document.getElementById('serverSettingsStatus');
+
+  const epHost = (document.getElementById('inputEndpointHost').value || '').trim();
+  const port = parseInt((document.getElementById('inputListenPort').value || '').trim(), 10);
+  if (isNaN(port) || port < 1 || port > 65535) {
+    alert(t.invalidListenPortAlert);
+    return;
+  }
+
+  const jc = document.getElementById('inputAwgJc').value.trim();
+  const jmin = document.getElementById('inputAwgJmin').value.trim();
+  const jmax = document.getElementById('inputAwgJmax').value.trim();
+  const s1 = document.getElementById('inputAwgS1').value.trim();
+  const s2 = document.getElementById('inputAwgS2').value.trim();
+  const h1 = document.getElementById('inputAwgH1').value.trim();
+  const h2 = document.getElementById('inputAwgH2').value.trim();
+  const h3 = document.getElementById('inputAwgH3').value.trim();
+  const h4 = document.getElementById('inputAwgH4').value.trim();
+
+  let params = new URLSearchParams();
+  params.set('action', 'set_server_settings');
+  params.set('endpoint_host', epHost || 'YOUR_SERVER_IP');
+  params.set('listen_port', String(port));
+  if (jc) params.set('jc', jc);
+  if (jmin) params.set('jmin', jmin);
+  if (jmax) params.set('jmax', jmax);
+  if (s1) params.set('s1', s1);
+  if (s2) params.set('s2', s2);
+  if (h1) params.set('h1', h1);
+  if (h2) params.set('h2', h2);
+  if (h3) params.set('h3', h3);
+  if (h4) params.set('h4', h4);
+
+  if (btn) btn.disabled = true;
+  if (statusEl) {
+    statusEl.style.display = 'inline';
+    statusEl.textContent = t.saving;
+  }
+
+  try {
+    const data = await apiFetch(`${API}?${params.toString()}`, { method: 'POST' });
+    if (data && data.status === 'ok') {
+      alert(data.reloaded ? t.serverSettingsReloadedAlert : t.serverSettingsSavedAlert);
+      fetchClients();
+    } else {
+      alert(t.apiError + ((data && data.message) || 'Failed to save server settings'));
+    }
+  } catch (err) {
+    alert(t.netError + err.message);
+  } finally {
+    if (btn) btn.disabled = false;
+    if (statusEl) statusEl.style.display = 'none';
   }
 }
 

@@ -265,7 +265,12 @@ try {
       interface: 'awg0',
       public_key: 'wpBj3ygxQ0I2lLE8q1DNaukExF4OzNNQ/OY2QpseLDs=',
       listen_port: 49155,
-      endpoint: '62.16.41.168:49155'
+      endpoint: '198.51.100.1:49155',
+      awg_params: {
+        jc: 4, jmin: 40, jmax: 70,
+        s1: 15, s2: 32,
+        h1: 1, h2: 2, h3: 3, h4: 4
+      }
     },
     auth_required: false,
     categories: [
@@ -338,7 +343,12 @@ const modalInputIds = [
   'rowOldPassword', 'lblOldPassword', 'inputOldPassword',
   'lblNewPassword', 'inputNewPassword',
   'lblConfirmPassword', 'inputConfirmPassword',
-  'btnSavePassword', 'btnRemovePassword'
+  'btnSavePassword', 'btnRemovePassword',
+  'cardServerConfig', 'inputEndpointHost', 'inputListenPort',
+  'inputAwgJc', 'inputAwgJmin', 'inputAwgJmax',
+  'inputAwgS1', 'inputAwgS2',
+  'inputAwgH1', 'inputAwgH2', 'inputAwgH3', 'inputAwgH4',
+  'btnSaveServerSettings', 'serverSettingsStatus'
 ];
 
 const missingDomIds = [];
